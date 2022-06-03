@@ -1,97 +1,69 @@
-import logging
-from sqlalchemy import text
-from sqlalchemy.orm import declarative_base, sessionmaker
 import inflection
 from typing import List
+from sqlalchemy import insert, select, update, delete
+from sqlalchemy.orm import declarative_base
 
 
 class CrudRepo:
-
     def __init__(self, engine, entity_type):
         self._engine = engine
         self._base = declarative_base()
-        self._entity_type = type(entity_type())
-
-    def _create_session(self):
-        return sessionmaker(bind=self._engine, expire_on_commit=False)
+        self._entity_type = entity_type
 
     def _table_name(self):
+        """Prepare the column name for insertion into the database"""
         return inflection.tableize(self._entity_type.__name__)
 
-    def add_or_update(self, item):
-        try:
-            new_session = self._create_session()
-            session = new_session()
-            if item.id:
-                item = session.merge(item)
-            session.add(item)
-            session.commit()
-            logging.info('Item correctly inserted or updated into db')
-            return item.id
-        except Exception as e:
-            logging.error(e)
-            session.rollback()
-        finally:
-            session.close()
+    def add(self, item):
+        """Add one row to the indicated database"""
+        with self._engine.begin() as conn:
+            item_to_add = insert(self._entity_type).values(item.__dict__)
+            conn.execute(item_to_add)
 
-    def find_by_id(self, item_id):
-        try:
-            new_session = self._create_session()
-            session = new_session()
-            return session.query(self._entity_type).filter_by(id=item_id).first()
-        except Exception as e:
-            logging.error(e)
-            session.rollback()
-        finally:
-            session.close()
+    def update_by_id(self, item_id: int, item):
+        """Update the row data for the entered id"""
+        with self._engine.begin() as conn:
+            item_to_add = update(self._entity_type).where(self._entity_type.id == item_id).values(item.__dict__)
+            conn.execute(item_to_add)
 
-    def find_all_by_id(self, item_ids):
-        try:
-            new_session = self._create_session()
-            session = new_session()
-            return session.query(self._entity_type).filter(self._entity_type.id.in_(item_ids)).all()
-        except Exception as e:
-            logging.error(e)
-            session.rollback()
-        finally:
-            session.close()
+    def find_by_id(self, item_id: int):
+        """Find items by id"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).where(self._entity_type.id == item_id)).first()
+            return result
+
+    def find_all_by_id(self, item_ids: List[int]):
+        """Return rows based on the list with the entered ids"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).where(self._entity_type.id.in_(item_ids))).all()
+            return result
 
     def find_all(self):
-        try:
-            new_session = self._create_session()
-            session = new_session()
-            return session.query(self._entity_type).all()
-        except Exception as e:
-            logging.error(e)
-            session.rollback()
-        finally:
-            session.close()
+        """Returns all rows for the given table"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type))
+            return [item for item in result]
 
-    def delete_by_id(self, item_id):
-        try:
-            new_session = self._create_session()
-            session = new_session()
-            item_to_delete = session.query(self._entity_type).filter_by(id=item_id).first()
-            if not item_to_delete:
-                raise ValueError('Cannot delete item')
-            session.delete(item_to_delete)
-            session.commit()
-            return item_to_delete.id
-        except Exception as e:
-            logging.error(e)
-            session.rollback()
-        finally:
-            session.close()
+    def delete_by_id(self, item_id: int):
+        """Delete the row for the entered id"""
+        with self._engine.begin() as conn:
+            item_to_add = delete(self._entity_type).where(self._entity_type.id == item_id)
+            conn.execute(item_to_add)
 
     def delete_all_by_id(self, items_id: List[int]):
-        try:
-            new_session = self._create_session()
-            session = new_session()
-            statement = self._entity_type.__table__.delete().where(self._entity_type.id.in_(items_id))
-            session.execute(statement)
-            session.commit()
-        except Exception as e:
-            logging.error(e)
-            session.rollback()
-        finally:
-            session.close()
+        """Delete the rows for the entered ids"""
+        with self._engine.begin() as conn:
+            item_to_add = delete(self._entity_type).where(self._entity_type.id.in_(items_id))
+            conn.execute(item_to_add)
+
+    def join(self, item, columns: tuple):
+        """Join columns for the given tables"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(columns).join(item)).all()
+            return [item for item in result]
+    
+    def join_where_equal(self, item, columns: tuple, condition: tuple):
+        """Join columns for the given tables. Return elements for the given condition"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(columns).join(item).where(condition[0] == condition[1])).all()
+            return [item for item in result]

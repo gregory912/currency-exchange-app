@@ -89,17 +89,25 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        'currency_conversions',
+        'currency_incomes',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column('id_user_account_out', sa.Integer, nullable=False),
-        sa.Column('id_user_account_in', sa.Integer, nullable=False),
+        sa.Column('id_user_account', sa.Integer, nullable=False),
         sa.Column('transfer_amount', sa.Numeric(precision=6, scale=2)),
         sa.Column('exchange_rate', sa.Numeric(precision=3, scale=2)),
         sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
-        sa.Column('balance_out', sa.Numeric(precision=6, scale=2)),
-        sa.Column('balance_in', sa.Numeric(precision=6, scale=2)),
-        sa.ForeignKeyConstraint(['id_user_account_out'], ['user_accounts.id']),
-        sa.ForeignKeyConstraint(['id_user_account_in'], ['user_accounts.id'])
+        sa.Column('balance', sa.Numeric(precision=6, scale=2)),
+        sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])
+    )
+
+    op.create_table(
+        'currency_expenses',
+        sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+        sa.Column('id_user_account', sa.Integer, nullable=False),
+        sa.Column('transfer_amount', sa.Numeric(precision=6, scale=2)),
+        sa.Column('exchange_rate', sa.Numeric(precision=3, scale=2)),
+        sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
+        sa.Column('balance', sa.Numeric(precision=6, scale=2)),
+        sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])
     )
 
     op.create_table(
@@ -125,5 +133,6 @@ def downgrade() -> None:
     op.drop_table('cards')
     op.drop_table('user_accounts')
     op.drop_table('card_transactions')
-    op.drop_table('currency_conversions')
+    op.drop_table('currency_incomes')
+    op.drop_table('currency_expenses')
     op.drop_table('transactions')
