@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 
 
 @dataclass
@@ -7,7 +8,7 @@ class Card:
     id_user_data: int = None
     card_number: str = None
     valid_thru: str = None
-    cvv: str = None
+    cvv: date = None
     blocked: bool = None
     daily_limit: int = None
     internet_limit: int = None

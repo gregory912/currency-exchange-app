@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+
+  mysql1:
+    image: mysql:latest
+    volumes:
+      - mysql1:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: currency_exchange_app
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user1234
+      MYSQL_TCP_PORT: 3309
+    ports:
+      - '3309:3309'
+    expose:
+      - 3309
+
+volumes:
+  mysql1:
