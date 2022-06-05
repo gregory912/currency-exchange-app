@@ -1,7 +1,7 @@
 import inflection
 from typing import List
 from sqlalchemy import insert, select, update, delete
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 
 class CrudRepo:
@@ -14,16 +14,27 @@ class CrudRepo:
         """Prepare the column name for insertion into the database"""
         return inflection.tableize(self._entity_type.__name__)
 
-    def add(self, item):
+    def _create_session(self):
+        """Create a new session"""
+        return sessionmaker(self._engine, future=True)
+
+    def add(self, **kwargs):
         """Add one row to the indicated database"""
         with self._engine.begin() as conn:
-            item_to_add = insert(self._entity_type).values(item.__dict__)
+            item_to_add = insert(self._entity_type).values(kwargs)
             conn.execute(item_to_add)
 
-    def update_by_id(self, item_id: int, item):
+    def add_join(self, item):
+        """Add one row to the indicated database"""
+        Session = self._create_session()
+        with Session() as session:
+            session.add(item)
+            session.commit()
+
+    def update_by_id(self, item_id: int, **kwargs):
         """Update the row data for the entered id"""
         with self._engine.begin() as conn:
-            item_to_add = update(self._entity_type).where(self._entity_type.id == item_id).values(item.__dict__)
+            item_to_add = update(self._entity_type).where(self._entity_type.id == item_id).values(kwargs)
             conn.execute(item_to_add)
 
     def find_by_id(self, item_id: int):
@@ -44,6 +55,11 @@ class CrudRepo:
             result = conn.execute(select(self._entity_type))
             return [item for item in result]
 
+    def get_last_row(self):
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).order_by(self._entity_type.id.desc())).first()
+            return result
+
     def delete_by_id(self, item_id: int):
         """Delete the row for the entered id"""
         with self._engine.begin() as conn:
@@ -61,7 +77,7 @@ class CrudRepo:
         with self._engine.begin() as conn:
             result = conn.execute(select(columns).join(item)).all()
             return [item for item in result]
-    
+
     def join_where_equal(self, item, columns: tuple, condition: tuple):
         """Join columns for the given tables. Return elements for the given condition"""
         with self._engine.begin() as conn:
