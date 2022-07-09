@@ -4,11 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-inflection = "*"
 sqlalchemy = "*"
 alembic = "*"
-mysqlclient = "*"
 bcrypt = "*"
+inflection = "*"
+mysqlclient = "*"
 
 [dev-packages]
 

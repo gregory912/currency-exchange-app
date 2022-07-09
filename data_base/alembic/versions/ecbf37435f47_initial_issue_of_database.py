@@ -72,7 +72,7 @@ def upgrade() -> None:
         sa.Column('id_user_data', sa.Integer, nullable=False),
         sa.Column('account_number', sa.String(26), nullable=False, unique=True),
         sa.Column('currency', sa.String(3), nullable=False),
-        sa.Column('amount', sa.Numeric(precision=6, scale=2), default=0),
+        sa.Column('balance', sa.Numeric(precision=6, scale=2), default=0),
         sa.ForeignKeyConstraint(['id_user_data'], ['user_data.id'])
     )
 
@@ -127,12 +127,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table('users')
-    op.drop_table('user_data')
-    op.drop_table('services')
-    op.drop_table('cards')
-    op.drop_table('user_accounts')
-    op.drop_table('card_transactions')
+    op.drop_table('transactions')
     op.drop_table('currency_incomes')
     op.drop_table('currency_expenses')
-    op.drop_table('transactions')
+    op.drop_table('card_transactions')
+    op.drop_table('user_accounts')
+    op.drop_table('cards')
+    op.drop_table('services')
+    op.drop_table('user_data')
+    op.drop_table('users')
+
+
+
+
+
+
+
