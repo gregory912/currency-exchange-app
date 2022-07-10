@@ -22,6 +22,7 @@ def upgrade() -> None:
                        table_name="user_data",
                        type_="foreignkey")
     op.drop_table('users')
+    op.drop_column('user_data', 'id_user')
     op.add_column('user_data', sa.Column('login', sa.String(50), nullable=False, unique=True))
     op.add_column('user_data', sa.Column('password', sa.String(200), nullable=False))
     op.add_column('user_data', sa.Column('creation_date', sa.DateTime(timezone=False), nullable=False))
@@ -77,6 +78,7 @@ def downgrade() -> None:
     op.drop_column('user_data', 'login')
     op.drop_column('user_data', 'password')
     op.drop_column('user_data', 'creation_date')
+    op.add_column('user_data', sa.Column('id_user', sa.Integer, nullable=False, unique=True))
     op.create_foreign_key(
         constraint_name="user_data_ibfk_2",
         source_table='user_data',

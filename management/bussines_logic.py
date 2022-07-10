@@ -1,10 +1,9 @@
 from sqlalchemy import create_engine
-from management.login_service import Login
-from management.account_service import AccountManagement
+from management.services.login_service import Login
+from management.services.account_service import AccountManagement
 from data_base.repository.crud_repo import CrudRepo
-from data_base.repository.user_data_repo import UserDataRepo
 from data_base.model.tables import ServiceTable, UserDataTable, UserAccountTable
-from management.validation import Validation
+from management.validation import *
 from management.conversions import *
 
 
@@ -17,39 +16,35 @@ class BussinesLogic:
         self.url = f'mysql://{self.username}:{self.password}@localhost:{self.port}/{self.database}'
         self.engine = create_engine(self.url, future=True)  #echo=True,
         self._logged_in_user = None
-        self._logged_in_user_data = None
         self._used_account = None
         self._sequence = 0
 
     def _login(self):
         if not Login.does_account_exist():
             Login.create_account(self.engine)
-        self._logged_in_user = user_named_tuple(Login.login(self.engine))
-        self._logged_in_user_data = user_data_named_tuple(
-            UserDataRepo(self.engine, UserDataTable).find_user_data(self._logged_in_user.id))
+        self._logged_in_user = user_data_named_tuple(Login.login(self.engine))
         self._sequence = 5
 
     def _get_last_used_account(self):
         while True:
-            last_used = CrudRepo(self.engine, ServiceTable).join_where_equal(
+            last_used = CrudRepo(self.engine, ServiceTable).join(
                 UserDataTable,
-                (ServiceTable.user_account_id,),
-                (UserDataTable.id_user, self._logged_in_user.id))
+                (ServiceTable.user_account_id,))
             if last_used:
                 self._used_account = user_account_named_tuple(
                     CrudRepo(self.engine, UserAccountTable).find_by_id(last_used[0][0]))
-                print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.amount}')
+                print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
                 break
             else:
                 print(f"{' ' * 12}You don't have any open account in the internet exchange currency. "
                       f"Would you like to open a new account?")
-                response = Validation.get_answer(
-                    Validation.validation_of_answer,
+                response = get_answer(
+                    validation_of_answer,
                     "Enter Y or N: ",
                     'Entered value is not correct. Enter Y or N: ')
                 if response == 'Y':
-                    AccountManagement.add_account(self.engine, self._logged_in_user_data.id)
-                    AccountManagement.add_service(self.engine, self._logged_in_user_data.id)
+                    AccountManagement.add_account(self.engine, self._logged_in_user.id)
+                    AccountManagement.add_service(self.engine, self._logged_in_user.id)
                 else:
                     break
 
@@ -63,8 +58,8 @@ class BussinesLogic:
             2. Operations for card
             3. Log out
             """)
-        chosen_operation = Validation.get_answer(
-            Validation.validation_chosen_operation,
+        chosen_operation = get_answer(
+            validation_chosen_operation,
             'Enter chosen operation: ',
             'Entered data contains illegal characters. Try again: ',
             (1, 3))
@@ -93,25 +88,25 @@ class BussinesLogic:
             9. Remove the account
            10. Go back
             """)
-        chosen_operation = Validation.get_answer(
-            Validation.validation_chosen_operation,
+        chosen_operation = get_answer(
+            validation_chosen_operation,
             'Enter chosen operation: ',
             'Entered data contains illegal characters. Try again: ',
             (1, 10))
         match chosen_operation:
             case '1':
-                AccountManagement.switch_accounts(self.engine, self._logged_in_user_data.id)
+                AccountManagement.switch_accounts(self.engine, self._logged_in_user.id)
             case '2':
-                if AccountManagement.add_account(self.engine, self._logged_in_user_data.id):
+                if AccountManagement.add_account(self.engine, self._logged_in_user.id):
                     print(f"\n{' ' * 12}Account has not been created. An account for this currency already exists.")
                 else:
-                    AccountManagement.update_service(self.engine, self._logged_in_user_data.id)
+                    AccountManagement.update_service(self.engine, self._logged_in_user.id)
             case '3':
                 pass
             case '4':
-                pass
+                AccountManagement.add_money(self.engine, self._used_account)
             case '5':
-                pass
+                AccountManagement.transfer_money(self.engine, self._used_account)
             case '6':
                 pass
             case '7':
@@ -133,8 +128,8 @@ class BussinesLogic:
             5. Security
             6. Go back
             """)
-        chosen_operation = Validation.get_answer(
-            Validation.validation_chosen_operation,
+        chosen_operation = get_answer(
+            validation_chosen_operation,
             'Enter chosen operation: ',
             'Entered data contains illegal characters. Try again: ',
             (1, 6))

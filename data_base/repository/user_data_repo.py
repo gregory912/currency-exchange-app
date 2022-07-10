@@ -8,3 +8,9 @@ class UserDataRepo(CrudRepo):
         with self._engine.begin() as conn:
             result = conn.execute(select(self._entity_type).where(self._entity_type.id_user == entity_id)).first()
             return result
+
+    def find_user(self, entity_login: str):
+        """Find items by name"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).where(self._entity_type.login == entity_login)).first()
+            return result
