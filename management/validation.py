@@ -25,6 +25,8 @@ def validation_digit(entered_item: str, min_length: int, max_length: int) -> boo
 
 def validation_space_or_alpha_not_digit(entered_item: str) -> bool:
     """Check if the entered value contains space, letters"""
+    if not entered_item:
+        return False
     if entered_item[:1] == ' ' or entered_item[-1:] == ' ':
         return False
     if entered_item.replace(' ', '').isdigit():
@@ -71,7 +73,7 @@ def validation_file_path(entered_item: str):
 def get_answer(function: Callable, description: str, wrong_answer: str, args: tuple = None) -> str:
     """Check the validation of the entered element on the basis of the entered validation function"""
     def get_tuple():
-        return (entered_answer,) if not args else tuple([x for x in [entered_answer] + [x for x in args] if x])
+        return (entered_answer,) if not args else tuple([x for x in [entered_answer] + [x for x in args]])
     while True:
         entered_answer = input(description)
         if function(*get_tuple()):

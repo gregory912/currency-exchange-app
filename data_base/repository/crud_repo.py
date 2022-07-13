@@ -32,13 +32,13 @@ class CrudRepo:
             session.commit()
 
     def update_by_id(self, item_id: int, **kwargs):
-        """Update the row data for the entered id"""
+        """Update the row data for the entered id_"""
         with self._engine.begin() as conn:
             item_to_add = update(self._entity_type).where(self._entity_type.id == item_id).values(kwargs)
             conn.execute(item_to_add)
 
     def find_by_id(self, item_id: int):
-        """Find items by id"""
+        """Find items by id_"""
         with self._engine.begin() as conn:
             result = conn.execute(select(self._entity_type).where(self._entity_type.id == item_id)).first()
             return result
@@ -61,7 +61,7 @@ class CrudRepo:
             return result
 
     def delete_by_id(self, item_id: int):
-        """Delete the row for the entered id"""
+        """Delete the row for the entered id_"""
         with self._engine.begin() as conn:
             item_to_add = delete(self._entity_type).where(self._entity_type.id == item_id)
             conn.execute(item_to_add)

@@ -18,7 +18,7 @@ class UserAccountRepo(CrudRepo):
             return result
 
     def find_all_accounts(self, id_user_data: int):
-        """Find all accounts for the given user id number"""
+        """Find all accounts for the given user id_ number"""
         with self._engine.begin() as conn:
             result = conn.execute(select(self._entity_type).where(
                 self._entity_type.id_user_data == id_user_data)).all()

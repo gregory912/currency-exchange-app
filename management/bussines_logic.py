@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from management.services.login_service import Login
-from management.services.account_service import AccountManagement
+from management.services.account_service import AccountService
+from management.services.currency_exchange_service import CurrencyExchangeService
 from data_base.repository.crud_repo import CrudRepo
 from data_base.model.tables import ServiceTable, UserDataTable, UserAccountTable
 from management.validation import *
@@ -9,7 +10,7 @@ from management.conversions import *
 
 class BussinesLogic:
     def __init__(self):
-        self.username = 'user'
+        self.username = 'user' #wprowadzic dane z pliku yml?
         self.password = 'user1234'
         self.database = 'currency_exchange_app'
         self.port = 3309
@@ -25,28 +26,29 @@ class BussinesLogic:
         self._logged_in_user = user_data_named_tuple(Login.login(self.engine))
         self._sequence = 5
 
+    def _user_without_account(self):
+        print(f"{' ' * 12}You don't have any open account in the internet exchange currency. "
+              f"Would you like to open a new account?")
+        response = get_answer(
+            validation_of_answer,
+            "Enter Y or N: ",
+            'Entered value is not correct. Enter Y or N: ')
+        if response == 'Y':
+            AccountService.add_account(self.engine, self._logged_in_user.id)
+            AccountService.add_service(self.engine, self._logged_in_user.id)
+
     def _get_last_used_account(self):
-        while True:
-            last_used = CrudRepo(self.engine, ServiceTable).join(
-                UserDataTable,
-                (ServiceTable.user_account_id,))
-            if last_used:
-                self._used_account = user_account_named_tuple(
-                    CrudRepo(self.engine, UserAccountTable).find_by_id(last_used[0][0]))
-                print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
-                break
-            else:
-                print(f"{' ' * 12}You don't have any open account in the internet exchange currency. "
-                      f"Would you like to open a new account?")
-                response = get_answer(
-                    validation_of_answer,
-                    "Enter Y or N: ",
-                    'Entered value is not correct. Enter Y or N: ')
-                if response == 'Y':
-                    AccountManagement.add_account(self.engine, self._logged_in_user.id)
-                    AccountManagement.add_service(self.engine, self._logged_in_user.id)
-                else:
-                    break
+        last_used = self._check_service()
+        if last_used:
+            self._used_account = user_account_named_tuple(
+                CrudRepo(self.engine, UserAccountTable).find_by_id(last_used[0][0]))
+            print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
+
+    def _check_service(self):
+        return CrudRepo(self.engine, ServiceTable).join_where_equal(
+            UserDataTable,
+            ServiceTable.user_account_id,
+            (UserDataTable.login, self._logged_in_user.login))
 
     def _get_all_cards(self):
         pass
@@ -65,6 +67,8 @@ class BussinesLogic:
             (1, 3))
         match chosen_operation:
             case '1':
+                if not self._check_service():
+                    self._user_without_account()
                 self._account_operations()
                 self._sequence = 10
             case '2':
@@ -95,18 +99,38 @@ class BussinesLogic:
             (1, 10))
         match chosen_operation:
             case '1':
-                AccountManagement.switch_accounts(self.engine, self._logged_in_user.id)
-            case '2':
-                if AccountManagement.add_account(self.engine, self._logged_in_user.id):
-                    print(f"\n{' ' * 12}Account has not been created. An account for this currency already exists.")
+                if self._used_account:
+                    AccountService.switch_accounts(self.engine, self._logged_in_user.id)
                 else:
-                    AccountManagement.update_service(self.engine, self._logged_in_user.id)
+                    print(f"\n{' ' * 12}You cannot switch account because you don't have any account. "
+                          f"Open a foreign currency account.")
+            case '2':
+                if not self._used_account:
+                    AccountService.add_account(self.engine, self._logged_in_user.id)
+                    AccountService.add_service(self.engine, self._logged_in_user.id)
+                else:
+                    if AccountService.add_account(self.engine, self._logged_in_user.id):
+                        print(f"\n{' ' * 12}Account has not been created. An account for this currency already exists.")
+                    else:
+                        AccountService.update_service(self.engine, self._logged_in_user.id)
             case '3':
-                pass
+                if self._used_account:
+                    CurrencyExchangeService().transaction(self.engine, self._logged_in_user.id, self._used_account)
+                else:
+                    print(f"\n{' ' * 12}You cannot make transactions because you don't have any account. "
+                          f"Open a foreign currency account.")
             case '4':
-                AccountManagement.add_money(self.engine, self._used_account)
+                if self._used_account:
+                    AccountService.add_money(self.engine, self._used_account)
+                else:
+                    print(f"\n{' ' * 12}You cannot add money because you don't have any account. "
+                          f"Open a foreign currency account.")
             case '5':
-                AccountManagement.transfer_money(self.engine, self._used_account)
+                if self._used_account:
+                    AccountService.transfer_money(self.engine, self._used_account)
+                else:
+                    print(f"\n{' ' * 12}You cannot transfer money because you don't have any account. "
+                          f"Open a foreign currency account.")
             case '6':
                 pass
             case '7':

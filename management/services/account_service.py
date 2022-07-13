@@ -9,7 +9,7 @@ from management.conversions import *
 from datetime import datetime
 
 
-class AccountManagement:
+class AccountService:
     @staticmethod
     def switch_accounts(engine, id_user_data: int):
         """Change the account for which the operations will be performed"""
@@ -23,18 +23,18 @@ class AccountManagement:
             'Entered data contains illegal characters. Try again: ',
             (1, len(accounts_named_tuple)))
         chosen_account = accounts_named_tuple[int(chosen_operation)-1].id
-        AccountManagement.update_service(engine, id_user_data, chosen_account)
+        AccountService.update_service(engine, id_user_data, chosen_account)
 
     @staticmethod
     def add_account(engine, id_user_data: int):
         """Add a new currency account. Check if the account no longer exists"""
-        currency = AccountManagement.choose_currency()
+        currency = AccountService.choose_currency()
         if UserAccountRepo(engine, UserAccountTable).check_if_account_exist(id_user_data, currency):
             return True
         else:
             CrudRepo(engine, UserAccountTable).add(
                 id_user_data=id_user_data,
-                account_number=AccountManagement.generate_account_number(engine),
+                account_number=AccountService.generate_account_number(engine),
                 currency=currency,
                 balance=Decimal(0))
             return False

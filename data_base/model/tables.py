@@ -86,7 +86,7 @@ class CardTransactionTable(base):
 
 
 class CurrencyExchangeTable(base):
-    __tablename__ = 'currency_expenses'
+    __tablename__ = 'currency_exchanges'
     id = Column(Integer, primary_key=True, autoincrement=True)
     id_user_account_out = Column(Integer, ForeignKey('user_accounts.id'), nullable=False)
     transfer_amount_out = Column(Numeric(precision=6, scale=2))
@@ -115,3 +115,10 @@ class TransactionTable(base):
     payer_name = Column(String(30), nullable=False)
     payer_account_number = Column(String(26), nullable=False)
     user_accounts_to_transactions = relationship("UserAccountTable", back_populates="transactions_to_user_accounts")
+
+
+class ApiRequestTable(base):
+    __tablename__ = 'api_requests'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    transactions_a_day = Column(Integer)
+    transactions_date = Column(DateTime(timezone=False))
