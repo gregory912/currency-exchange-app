@@ -2,6 +2,7 @@ import inflection
 from typing import List
 from sqlalchemy import insert, select, update, delete
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import between
 
 
 class CrudRepo:
@@ -55,7 +56,20 @@ class CrudRepo:
             result = conn.execute(select(self._entity_type))
             return [item for item in result]
 
+    def find_all_condition(self, condition: tuple) -> List[tuple]:
+        """Find all items which comply the elements"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).where(condition[0] == condition[1]))
+            return [item for item in result]
+
+    def find_between(self, elements: tuple) -> List[tuple]:
+        """Find all items between indicated elements"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).where(between(*elements)))
+            return [item for item in result]
+
     def get_last_row(self):
+        """Return the last row"""
         with self._engine.begin() as conn:
             result = conn.execute(select(self._entity_type).order_by(self._entity_type.id.desc())).first()
             return result
@@ -79,7 +93,7 @@ class CrudRepo:
             return [item for item in result]
 
     def join_where_equal(self, item, columns: tuple, condition: tuple):
-        """Join columns for the given tables. Return elements for the given condition"""
+        """Join columns for the given tables. Return elements for the given elements"""
         with self._engine.begin() as conn:
             result = conn.execute(select(columns).join(item).where(condition[0] == condition[1])).all()
             return [item for item in result]

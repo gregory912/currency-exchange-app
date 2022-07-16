@@ -1,5 +1,5 @@
 from data_base.repository.crud_repo import CrudRepo
-from sqlalchemy import select
+from sqlalchemy import select, and_, between
 
 
 class UserAccountRepo(CrudRepo):
@@ -23,3 +23,9 @@ class UserAccountRepo(CrudRepo):
             result = conn.execute(select(self._entity_type).where(
                 self._entity_type.id_user_data == id_user_data)).all()
             return result
+
+    def find_btwn_dates(self, elements: tuple):
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).where(
+                and_(between(elements[0], elements[1], elements[2])), (elements[3] == elements[4])))
+            return [item for item in result]

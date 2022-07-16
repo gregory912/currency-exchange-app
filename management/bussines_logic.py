@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from management.services.login_service import Login
 from management.services.account_service import AccountService
 from management.services.currency_exchange_service import CurrencyExchangeService
+from management.services.transactions_service import TransactionService
 from data_base.repository.crud_repo import CrudRepo
 from data_base.model.tables import ServiceTable, UserDataTable, UserAccountTable
 from management.validation import *
@@ -132,9 +133,18 @@ class BussinesLogic:
                     print(f"\n{' ' * 12}You cannot transfer money because you don't have any account. "
                           f"Open a foreign currency account.")
             case '6':
-                pass
+                if self._used_account:
+                    print(f"\n{' ' * 12}Account_number:{self._used_account.account_number} "
+                          f"Currency:{self._used_account.currency} Balance:{self._used_account.balance} ")
+                else:
+                    print(f"\n{' ' * 12}You cannot see your account details because you don't have any account. "
+                          f"Open a foreign currency account.")
             case '7':
-                pass
+                if self._used_account:
+                    TransactionService().last_transactions(self.engine, self._used_account)
+                else:
+                    print(f"\n{' ' * 12}You cannot see last transactions because you don't have any account. "
+                          f"Open a foreign currency account.")
             case '8':
                 pass
             case '9':

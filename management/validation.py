@@ -1,6 +1,7 @@
 import re
 import os
 from typing import Callable
+from datetime import datetime
 
 
 def validation_of_answer(entered_value: str) -> bool:
@@ -68,6 +69,14 @@ def validation_file_name(entered_item: str):
 def validation_file_path(entered_item: str):
     """Check if entered path exist"""
     return True if os.path.exists(entered_item) else False
+
+
+def validation_datetime(entered_item: str):
+    """Check if entered string can be a datetime"""
+    try:
+        return datetime.fromisoformat(entered_item)
+    except ValueError:
+        return False
 
 
 def get_answer(function: Callable, description: str, wrong_answer: str, args: tuple = None) -> str:
