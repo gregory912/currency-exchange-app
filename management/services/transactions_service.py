@@ -28,13 +28,13 @@ class TransactionService:
     @staticmethod
     def get_all_transactions(engine, used_account: namedtuple) -> tuple:
         """The function returns all transactions for a given account"""
-        cur_exch_out = CrudRepo(engine, CurrencyExchangeTable).find_all_condition(
+        cur_exch_out = CrudRepo(engine, CurrencyExchangeTable).find_all_with_condition(
             (CurrencyExchangeTable.id_user_account_out, used_account.id))
-        cur_exch_in = CrudRepo(engine, CurrencyExchangeTable).find_all_condition(
+        cur_exch_in = CrudRepo(engine, CurrencyExchangeTable).find_all_with_condition(
             (CurrencyExchangeTable.id_user_account_in, used_account.id))
-        transactions = CrudRepo(engine, TransactionTable).find_all_condition(
+        transactions = CrudRepo(engine, TransactionTable).find_all_with_condition(
             (TransactionTable.id_user_account, used_account.id))
-        card_transactions = CrudRepo(engine, CardTransactionTable).find_all_condition(
+        card_transactions = CrudRepo(engine, CardTransactionTable).find_all_with_condition(
             (CardTransactionTable.id_user_account, used_account.id))
         return cur_exch_out, cur_exch_in, transactions, card_transactions
 

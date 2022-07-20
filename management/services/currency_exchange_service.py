@@ -1,7 +1,6 @@
 import requests
 import json
 from management.validation import *
-from data_base.repository.user_account_repo import UserAccountRepo
 from management.conversions import *
 from data_base.model.tables import UserAccountTable, CurrencyExchangeTable, ApiRequestTable
 from decimal import Decimal
@@ -98,7 +97,9 @@ class CurrencyExchangeService:
     @staticmethod
     def available_accounts(engine, id_user_data: int, used_account: namedtuple) -> list:
         """Get all accounts that can be used for currency exchange"""
-        accounts = UserAccountRepo(engine, UserAccountTable).find_all_accounts(id_user_data)
+        # accounts = UserAccountRepo(engine, UserAccountTable).find_all_accounts(id_user_data)
+        accounts = CrudRepo(engine, UserAccountTable).find_all_with_condition((
+                UserAccountTable.id_user_data, id_user_data))
         accounts_named_tuple = [user_account_named_tuple(acc) for acc in accounts if acc[3] != used_account.currency]
         for x in range(0, len(accounts_named_tuple)):
             print(f"{' ' * 12}", x + 1, ' ', accounts_named_tuple[x].currency)

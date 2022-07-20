@@ -3,8 +3,9 @@ from management.services.login_service import Login
 from management.services.account_service import AccountService
 from management.services.currency_exchange_service import CurrencyExchangeService
 from management.services.transactions_service import TransactionService
+from management.services.card_service import CardService
 from data_base.repository.crud_repo import CrudRepo
-from data_base.model.tables import ServiceTable, UserDataTable, UserAccountTable
+from data_base.model.tables import UserAccountTable, CardTable
 from management.validation import *
 from management.conversions import *
 
@@ -19,40 +20,26 @@ class BussinesLogic:
         self.engine = create_engine(self.url, future=True)  #echo=True,
         self._logged_in_user = None
         self._used_account = None
+        self._used_card = None
         self._sequence = 0
 
-    def _login(self):
-        if not Login.does_account_exist():
-            Login.create_account(self.engine)
-        self._logged_in_user = user_data_named_tuple(Login.login(self.engine))
-        self._sequence = 5
-
-    def _user_without_account(self):
-        print(f"{' ' * 12}You don't have any open account in the internet exchange currency. "
-              f"Would you like to open a new account?")
-        response = get_answer(
-            validation_of_answer,
-            "Enter Y or N: ",
-            'Entered value is not correct. Enter Y or N: ')
-        if response == 'Y':
-            AccountService.add_account(self.engine, self._logged_in_user.id)
-            AccountService.add_service(self.engine, self._logged_in_user.id)
-
-    def _get_last_used_account(self):
-        last_used = self._check_service()
+    def _get_last_used_account(self, print_account: bool = True):
+        last_used = AccountService.check_service(self.engine, self._logged_in_user)
         if last_used:
             self._used_account = user_account_named_tuple(
                 CrudRepo(self.engine, UserAccountTable).find_by_id(last_used[0][0]))
-            print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
+            if print_account:
+                print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
 
-    def _check_service(self):
-        return CrudRepo(self.engine, ServiceTable).join_where_equal(
-            UserDataTable,
-            ServiceTable.user_account_id,
-            (UserDataTable.login, self._logged_in_user.login))
-
-    def _get_all_cards(self):
-        pass
+    def _get_last_used_card(self, print_card: bool = True):
+        last_used = CardService.check_service(self.engine, self._logged_in_user)
+        if last_used[0][0]:
+            self._used_card = card_named_tuple(CrudRepo(self.engine, CardTable).find_by_id_choose_columns(
+                last_used[0][0],
+                (CardTable.id, CardTable.card_number, CardTable.valid_thru, CardTable.card_name, CardTable.card_type)))
+            if print_card:
+                print(f'\n{" " * 12}{self._used_card.card_name} Type: {self._used_card.card_type} '
+                      f'Number: *{self._used_card.card_number[-4:]}')
 
     def _choose_operation(self):
         print("""
@@ -68,13 +55,18 @@ class BussinesLogic:
             (1, 3))
         match chosen_operation:
             case '1':
-                if not self._check_service():
-                    self._user_without_account()
-                self._account_operations()
+                if not AccountService.check_service(self.engine, self._logged_in_user):
+                    AccountService.user_without_account(self.engine, self._logged_in_user)
                 self._sequence = 10
             case '2':
-                self._card_operations()
-                self._sequence = 15
+                if AccountService.check_service(self.engine, self._logged_in_user):
+                    if not CardService.check_service(self.engine, self._logged_in_user)[0][0]:
+                        CardService.user_without_card(self.engine, self._logged_in_user)
+                        self._sequence = 15
+                    else:
+                        self._sequence = 15
+                else:
+                    AccountService.user_without_account(self.engine, self._logged_in_user)
             case '3':
                 raise SystemExit(0)
 
@@ -153,38 +145,60 @@ class BussinesLogic:
                 self._choose_operation()
 
     def _card_operations(self):
+        self._get_last_used_account(False)
+        self._get_last_used_card()
         print("""
-            Select operation for your card: 
-            1. View card details
-            2. Block the card
-            3. Set the card limit
-            4. Show PIN
-            5. Security
-            6. Go back
+            Select operation for your card:
+            1. Switch to another card
+            2. Pay by card
+            3. Get a new card
+            4. Deposit money on the card
+            5. View card details
+            6. Block the card
+            7. Set the card limit
+            8. Show PIN
+            9. Security
+           10. Go back
             """)
         chosen_operation = get_answer(
             validation_chosen_operation,
             'Enter chosen operation: ',
             'Entered data contains illegal characters. Try again: ',
-            (1, 6))
+            (1, 10))
         match chosen_operation:
             case '1':
-                pass
+                if self._used_card:
+                    CardService.switch_cards(self.engine, self._logged_in_user.id)
+                else:
+                    print(f"\n{' ' * 12}You cannot switch cards. You need a foreign currency account with a card. "
+                          f"Check if you have both.")
             case '2':
                 pass
             case '3':
-                pass
+                if CardService.add_card_type(self.engine, self._logged_in_user.id):
+                    CardService.update_service_after_adding_card(self.engine, self._logged_in_user.id)
             case '4':
                 pass
             case '5':
                 pass
             case '6':
+                pass
+            case '7':
+                pass
+            case '8':
+                pass
+            case '9':
+                pass
+            case '10':
                 self._choose_operation()
 
     def cycle(self):
         match self._sequence:
             case 0:
-                self._login()
+                if not Login.does_account_exist():
+                    Login.create_account(self.engine)
+                self._logged_in_user = user_data_named_tuple(Login.login(self.engine))
+                self._sequence = 5
             case 5:
                 self._choose_operation()
             case 10:

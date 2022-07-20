@@ -28,6 +28,7 @@ class ServiceTable(base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     id_user_data = Column(Integer, ForeignKey('user_data.id'), nullable=False, unique=True)
     user_account_id = Column(Integer, nullable=False, unique=True)
+    card_id = Column(Integer, unique=True)
 
     user_data_to_services = relationship("UserDataTable", back_populates="services_to_user_data")
 
@@ -49,6 +50,8 @@ class CardTable(base):
     sec_magnetic_strip = Column(Boolean, default=False)
     sec_withdrawals_atm = Column(Boolean, default=True)
     sec_contactless = Column(Boolean, default=True)
+    card_name = Column(String(50), nullable=False)
+    card_type = Column(String(30), nullable=False)
 
     user_data_to_cards = relationship("UserDataTable", back_populates="cards_to_user_data")
     card_transactions_to_cards = relationship("CardTransactionTable", back_populates="cards_to_card_transactions")
@@ -63,8 +66,8 @@ class UserAccountTable(base):
     balance = Column(Numeric(precision=6, scale=2), default=0)
 
     user_data_to_user_accounts = relationship("UserDataTable", back_populates="user_accounts_to_user_data")
-    card_transactions_to_user_accounts = relationship("CardTransactionTable",
-                                                      back_populates="user_accounts_to_card_transactions")
+    card_transactions_to_user_accounts = relationship(
+        "CardTransactionTable", back_populates="user_accounts_to_card_transactions")
     transactions_to_user_accounts = relationship("TransactionTable", back_populates="user_accounts_to_transactions")
 
 
@@ -78,11 +81,13 @@ class CardTransactionTable(base):
     balance = Column(Numeric(precision=6, scale=2))
     payer_name = Column(String(50), nullable=False)
     id_card = Column(Integer, ForeignKey('cards.id'), nullable=False)
+    payout = Column(String(3), nullable=False)
+    payment = Column(String(3), nullable=False)
 
-    user_accounts_to_card_transactions = relationship("UserAccountTable",
-                                                      back_populates="card_transactions_to_user_accounts")
-    cards_to_card_transactions = relationship("CardTable",
-                                              back_populates="card_transactions_to_cards")
+    user_accounts_to_card_transactions = relationship(
+        "UserAccountTable", back_populates="card_transactions_to_user_accounts")
+    cards_to_card_transactions = relationship(
+        "CardTable", back_populates="card_transactions_to_cards")
 
 
 class CurrencyExchangeTable(base):

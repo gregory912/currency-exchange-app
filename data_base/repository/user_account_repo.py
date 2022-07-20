@@ -3,28 +3,15 @@ from sqlalchemy import select, and_, between
 
 
 class UserAccountRepo(CrudRepo):
-    def find_account_number(self, account_number: str):
-        """Check if the entered account number exists in the database"""
-        with self._engine.begin() as conn:
-            result = conn.execute(select(self._entity_type).where(
-                self._entity_type.account_number == account_number)).first()
-            return result
-
     def check_if_account_exist(self, id_user_data: int, currency: str):
         """Check if the account for the entered user and currency already exists"""
         with self._engine.begin() as conn:
             result = conn.execute(select(self._entity_type).where(
-                self._entity_type.id_user_data == id_user_data, self._entity_type.currency == currency)).first()
-            return result
-
-    def find_all_accounts(self, id_user_data: int):
-        """Find all accounts for the given user id_ number"""
-        with self._engine.begin() as conn:
-            result = conn.execute(select(self._entity_type).where(
-                self._entity_type.id_user_data == id_user_data)).all()
+                and_(self._entity_type.id_user_data == id_user_data, self._entity_type.currency == currency))).first()
             return result
 
     def find_btwn_dates(self, elements: tuple):
+        """Return all items that are between the indicated dates and for the given account"""
         with self._engine.begin() as conn:
             result = conn.execute(select(self._entity_type).where(
                 and_(between(elements[0], elements[1], elements[2])), (elements[3] == elements[4])))

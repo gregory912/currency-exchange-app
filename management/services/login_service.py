@@ -1,6 +1,5 @@
 from management.validation import *
 from management.security.security import Security
-from data_base.repository.user_data_repo import UserDataRepo
 from data_base.repository.crud_repo import CrudRepo
 from data_base.model.tables import UserDataTable
 from datetime import datetime
@@ -35,7 +34,7 @@ class Login:
                     validation_alnum_and_not_digit,
                     'Enter Password: ',
                     'Entered data contains illegal characters. Try again: '))
-                if UserDataRepo(engine, UserDataTable).find_user(login):
+                if CrudRepo(engine, UserDataTable).find_first_with_condition((UserDataTable.login, login)):
                     print(f'{" " * 12}Entered login is already used. Enter another login.')
                 else:
                     break
@@ -78,7 +77,7 @@ class Login:
         while True:
             login = input('Enter your login: ')
             password = input('Enter your password: ')
-            logged_in_user = UserDataRepo(engine, UserDataTable).find_user(login)
+            logged_in_user = CrudRepo(engine, UserDataTable).find_first_with_condition((UserDataTable.login, login))
             if logged_in_user and Security.check_password(password, logged_in_user.password):
                 print(f'\n{" " * 12}Welcome in your currency exchange account.')
                 return logged_in_user

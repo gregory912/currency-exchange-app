@@ -44,6 +44,12 @@ class CrudRepo:
             result = conn.execute(select(self._entity_type).where(self._entity_type.id == item_id)).first()
             return result
 
+    def find_by_id_choose_columns(self, item_id: int, columns: tuple):
+        """Find items by id_"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(columns).where(self._entity_type.id == item_id)).first()
+            return result
+
     def find_all_by_id(self, item_ids: List[int]):
         """Return rows based on the list with the entered ids"""
         with self._engine.begin() as conn:
@@ -56,11 +62,17 @@ class CrudRepo:
             result = conn.execute(select(self._entity_type))
             return [item for item in result]
 
-    def find_all_condition(self, condition: tuple) -> List[tuple]:
-        """Find all items which comply the elements"""
+    def find_all_with_condition(self, condition: tuple) -> List[tuple]:
+        """Find all items which comply the condition"""
         with self._engine.begin() as conn:
             result = conn.execute(select(self._entity_type).where(condition[0] == condition[1]))
             return [item for item in result]
+
+    def find_first_with_condition(self, condition: tuple):
+        """Find first item which comply the condition"""
+        with self._engine.begin() as conn:
+            result = conn.execute(select(self._entity_type).where(condition[0] == condition[1])).first()
+            return result
 
     def find_between(self, elements: tuple) -> List[tuple]:
         """Find all items between indicated elements"""
@@ -92,7 +104,7 @@ class CrudRepo:
             result = conn.execute(select(columns).join(item)).all()
             return [item for item in result]
 
-    def join_where_equal(self, item, columns: tuple, condition: tuple):
+    def join_with_condition(self, item, columns: tuple, condition: tuple):
         """Join columns for the given tables. Return elements for the given elements"""
         with self._engine.begin() as conn:
             result = conn.execute(select(columns).join(item).where(condition[0] == condition[1])).all()

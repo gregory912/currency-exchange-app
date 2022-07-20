@@ -11,6 +11,11 @@ def user_account_named_tuple(items):
     return UserAccount(*items)
 
 
+def card_named_tuple(items):
+    Card = namedtuple("Card", "id card_number valid_thru card_name card_type")
+    return Card(*items)
+
+
 def currency_exchange_named_tuple(items):
     ExchangeCurrency = namedtuple("ExchangeCurrency",
                                   "id "
