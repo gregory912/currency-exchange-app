@@ -145,6 +145,7 @@ class BussinesLogic:
                 self._choose_operation()
 
     def _card_operations(self):
+        # dopisac metode ktora sprawdza czy karta nie jest przeterminowana
         self._get_last_used_account(False)
         self._get_last_used_card()
         print("""
@@ -152,19 +153,20 @@ class BussinesLogic:
             1. Switch to another card
             2. Pay by card
             3. Get a new card
-            4. Deposit money on the card
-            5. View card details
-            6. Block the card
-            7. Set the card limit
-            8. Show PIN
-            9. Security
-           10. Go back
+            4. Withdraw the money
+            5. Deposit money on the card
+            6. View card details
+            7. Block the card
+            8. Set the card limit
+            9. Show PIN
+           10. Security
+           11. Go back
             """)
         chosen_operation = get_answer(
             validation_chosen_operation,
             'Enter chosen operation: ',
             'Entered data contains illegal characters. Try again: ',
-            (1, 10))
+            (1, 11))
         match chosen_operation:
             case '1':
                 if self._used_card:
@@ -173,7 +175,7 @@ class BussinesLogic:
                     print(f"\n{' ' * 12}You cannot switch cards. You need a foreign currency account with a card. "
                           f"Check if you have both.")
             case '2':
-                pass
+                CardService.pay_by_card(self.engine, self._used_card, self._logged_in_user)
             case '3':
                 if CardService.add_card_type(self.engine, self._logged_in_user.id):
                     CardService.update_service_after_adding_card(self.engine, self._logged_in_user.id)
@@ -190,6 +192,8 @@ class BussinesLogic:
             case '9':
                 pass
             case '10':
+                pass
+            case '11':
                 self._choose_operation()
 
     def cycle(self):

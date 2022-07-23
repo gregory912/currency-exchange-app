@@ -22,10 +22,16 @@ def upgrade() -> None:
     ### TABLE CARDS ###
     op.add_column('cards', sa.Column('card_name', sa.String(50), nullable=False))
     op.add_column('cards', sa.Column('card_type', sa.String(30), nullable=False))
+    op.add_column('cards', sa.Column('main_currency', sa.String(3), nullable=False))
+
 
     ### TABLE CARD TRANSACTION ###
     op.add_column('card_transactions', sa.Column('payout', sa.String(3), nullable=False))
     op.add_column('card_transactions', sa.Column('payment', sa.String(3), nullable=False))
+    op.add_column('card_transactions', sa.Column('rate_to_main_currency', sa.Numeric(precision=3, scale=2), nullable=False))
+    op.add_column('card_transactions', sa.Column('transaction_type', sa.String(50), nullable=False))
+    op.add_column('card_transactions', sa.Column('rate', sa.Numeric(precision=3, scale=2)))
+
 
 
 def downgrade() -> None:
@@ -35,7 +41,11 @@ def downgrade() -> None:
     ### TABLE CARDS ###
     op.drop_column('cards', 'card_name')
     op.drop_column('cards', 'card_type')
+    op.drop_column('cards', 'main_currency')
 
     ### TABLE CARD TRANSACTION ###
     op.drop_column('card_transactions', 'payout')
     op.drop_column('card_transactions', 'payment')
+    op.drop_column('card_transactions', 'rate_to_main_currency')
+    op.drop_column('card_transactions', 'transaction_type')
+    op.drop_column('card_transactions', 'rate')

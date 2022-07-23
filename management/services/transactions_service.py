@@ -1,6 +1,7 @@
 from management.conversions import *
 from management.validation import *
 from data_base.model.tables import CurrencyExchangeTable, CardTransactionTable, TransactionTable, UserAccountTable
+from data_base.model.tables import CardTable
 from data_base.repository.crud_repo import CrudRepo
 from data_base.repository.user_account_repo import UserAccountRepo
 from datetime import datetime
@@ -21,9 +22,17 @@ class TransactionService:
     @staticmethod
     def print_transactions(transactions: list[namedtuple]) -> None:
         """Print transactions based on Transaction namedtuple"""
+        def space(text: str, elements: int) -> str:
+            return ' ' * (elements - len(text)) if text else ' ' * elements
         for x in transactions:
-            print(f"Data: {x.date} Customer: {x.customer} Acc number: {x.acc_number} Card nb: {x.card_nb} "
-                  f"Payout: {x.payout} Payment: {x.payment} Rate: {x.rate} Saldo: {x.saldo} Comission: {x.comission}")
+            print(f"Data: {x.date} Customer: {x.customer}{space(x.customer, 20)} "
+                  f"Acc number: {x.acc_number}{space(x.acc_number, 22)} "
+                  f"Card nb: {x.card_nb}{space(x.card_nb, 16)} "
+                  f"Payout: {x.payout}{space(str(x.payout), 7)} "
+                  f"Payment: {x.payment}{space(str(x.payment), 7)} "
+                  f"Rate: {x.rate}{space(str(x.rate), 4)} "
+                  f"Saldo: {x.saldo}{space(str(x.saldo), 7)} "
+                  f"Commission: {x.commission}")
 
     @staticmethod
     def get_all_transactions(engine, used_account: namedtuple) -> tuple:
@@ -128,12 +137,12 @@ class TransactionService:
                     transaction.transaction_time,
                     transaction.payer_name,
                     "",
-                    transaction.id_card,
-                    "",
+                    CrudRepo(engine, CardTable).find_by_id(transaction.id_card)[2],
                     transaction.amount,
                     "",
+                    transaction.rate,
                     transaction.balance,
-                    transaction.comission
+                    transaction.commission
                 )))
         return filtred_transactions
 

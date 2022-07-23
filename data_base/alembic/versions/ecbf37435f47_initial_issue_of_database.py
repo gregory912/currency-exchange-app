@@ -72,7 +72,7 @@ def upgrade() -> None:
         sa.Column('id_user_data', sa.Integer, nullable=False),
         sa.Column('account_number', sa.String(26), nullable=False, unique=True),
         sa.Column('currency', sa.String(3), nullable=False),
-        sa.Column('balance', sa.Numeric(precision=6, scale=2), default=0),
+        sa.Column('balance', sa.Numeric(precision=8, scale=2), default=0),
         sa.ForeignKeyConstraint(['id_user_data'], ['user_data.id'])
     )
 
@@ -81,9 +81,9 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('id_user_account', sa.Integer, nullable=False),
         sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
-        sa.Column('amount', sa.Numeric(precision=6, scale=2)),
+        sa.Column('amount', sa.Numeric(precision=8, scale=2)),
         sa.Column('commission', sa.Numeric(precision=3, scale=2)),
-        sa.Column('balance', sa.Numeric(precision=6, scale=2)),
+        sa.Column('balance', sa.Numeric(precision=8, scale=2)),
         sa.Column('payer_name', sa.String(50), nullable=False),
         sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])
     )
@@ -92,10 +92,10 @@ def upgrade() -> None:
         'currency_incomes',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('id_user_account', sa.Integer, nullable=False),
-        sa.Column('transfer_amount', sa.Numeric(precision=6, scale=2)),
+        sa.Column('transfer_amount', sa.Numeric(precision=8, scale=2)),
         sa.Column('exchange_rate', sa.Numeric(precision=3, scale=2)),
         sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
-        sa.Column('balance', sa.Numeric(precision=6, scale=2)),
+        sa.Column('balance', sa.Numeric(precision=8, scale=2)),
         sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])
     )
 
@@ -103,10 +103,10 @@ def upgrade() -> None:
         'currency_expenses',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('id_user_account', sa.Integer, nullable=False),
-        sa.Column('transfer_amount', sa.Numeric(precision=6, scale=2)),
+        sa.Column('transfer_amount', sa.Numeric(precision=8, scale=2)),
         sa.Column('exchange_rate', sa.Numeric(precision=3, scale=2)),
         sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
-        sa.Column('balance', sa.Numeric(precision=6, scale=2)),
+        sa.Column('balance', sa.Numeric(precision=8, scale=2)),
         sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])
     )
 
@@ -118,8 +118,8 @@ def upgrade() -> None:
         sa.Column('payout', sa.String(3), nullable=True),
         sa.Column('transfer_title', sa.String(50), nullable=False),
         sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
-        sa.Column('amount', sa.Numeric(precision=6, scale=2)),
-        sa.Column('balance', sa.Numeric(precision=6, scale=2)),
+        sa.Column('amount', sa.Numeric(precision=8, scale=2)),
+        sa.Column('balance', sa.Numeric(precision=8, scale=2)),
         sa.Column('payer_name', sa.String(30), nullable=False),
         sa.Column('payer_account_number', sa.String(26), nullable=False),
         sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])

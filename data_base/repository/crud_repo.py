@@ -29,7 +29,7 @@ class CrudRepo:
         """Add one row to the indicated database"""
         Session = self._create_session()
         with Session() as session:
-            session.add(item)
+            session.add_card(item)
             session.commit()
 
     def update_by_id(self, item_id: int, **kwargs):
