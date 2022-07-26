@@ -67,6 +67,7 @@ class CurrencyExchangeService:
                         balance_in=exch_cur_in['balance'],
                         transaction_time=datetime.now()
                     )
+                    print(f"\n{' ' * 12}The transaction was successful.")
                 else:
                     print(f'\n{" " * 12}Unfortunately we are unable to make an exchange. '
                           'Query limit for today has been exhausted. Please try again tomorrow.')

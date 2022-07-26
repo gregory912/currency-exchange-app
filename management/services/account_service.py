@@ -124,7 +124,7 @@ class AccountService:
             'Enter the amount: ',
             'Entered data contains illegal characters. Try again: ')
         payer_name = get_answer(
-            validation_alpha,
+            validation_space_or_alpha_not_digit,
             'Enter the payer name: ',
             'Entered data contains illegal characters. Try again: ')
         payer_acc_number = get_answer(

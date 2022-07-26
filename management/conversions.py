@@ -12,12 +12,12 @@ def user_account_named_tuple(items):
 
 
 def dates_named_tuple(items):
-    Dates = namedtuple("Dates", "start_date end_date ")
+    Dates = namedtuple("Dates", "start_date end_date")
     return Dates(*items)
 
 
 def card_named_tuple(items):
-    Card = namedtuple("Card", "id card_number valid_thru card_name card_type")
+    Card = namedtuple("Card", "id card_number valid_thru card_name card_type main_currency")
     return Card(*items)
 
 
@@ -38,7 +38,9 @@ def card_all_named_tuple(items):
         "sec_magnetic_strip "
         "sec_withdrawals_atm "
         "sec_contactless "
-        "card_name card_type main_currency")
+        "card_name "
+        "card_type "
+        "main_currency")
     return CardAll(*items)
 
 
@@ -73,7 +75,8 @@ def card_transaction_named_tuple(items):
         "payment "
         "rate_to_main_currency "
         "transaction_type "
-        "rate")
+        "rate "
+        "payer_account_number")
     return CardTransaction(*items)
 
 
@@ -107,22 +110,4 @@ def all_transactions_named_tuple(items):
         "commission")
     return AllTransactions(*items)
 
-
-def card_transactions_named_tuple(items):
-    CardTransactions = namedtuple(
-        "CardTransaction",
-        "id "
-        "id_user_account "
-        "transaction_time "
-        "amount commission "
-        "balance "
-        "payer_name "
-        "id_card "
-        "payout "
-        "payment "
-        "rate_to_main_currency "
-        "transaction_type "
-        "rate"
-    )
-    return CardTransactions(*items)
 

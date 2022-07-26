@@ -10,6 +10,7 @@ bcrypt = "*"
 inflection = "*"
 mysqlclient = "*"
 requests = "*"
+openpyxl = "*"
 
 [dev-packages]
 

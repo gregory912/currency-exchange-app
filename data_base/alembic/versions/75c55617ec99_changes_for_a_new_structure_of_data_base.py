@@ -28,13 +28,14 @@ def upgrade() -> None:
     op.add_column('user_data', sa.Column('creation_date', sa.DateTime(timezone=False), nullable=False))
 
     ### TABLE CARD_TRANSACTIONS ###
-    op.add_column('card_transactions', sa.Column('id_card', sa.Integer, nullable=False))
+    op.add_column('card_transactions', sa.Column('id_card', sa.Integer))
     op.create_foreign_key(
         constraint_name="card_transactions_ibfk_2",
         source_table='card_transactions',
         referent_table='cards',
         local_cols=['id_card'],
-        remote_cols=['id'])
+        remote_cols=['id'],
+        ondelete="SET NULL")
 
     ### TABLE CURRENCY INCOMES ###
     op.drop_constraint(constraint_name="currency_incomes_ibfk_1",

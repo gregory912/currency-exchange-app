@@ -3,7 +3,8 @@ from management.services.login_service import Login
 from management.services.account_service import AccountService
 from management.services.currency_exchange_service import CurrencyExchangeService
 from management.services.transactions_service import TransactionService
-from management.services.card_service import CardService
+from management.services.card_transactions_service import CardTransactionsService
+from management.services.card_management_service import CardManagementService
 from data_base.repository.crud_repo import CrudRepo
 from data_base.model.tables import UserAccountTable, CardTable
 from management.validation import *
@@ -32,14 +33,17 @@ class BussinesLogic:
                 print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
 
     def _get_last_used_card(self, print_card: bool = True):
-        last_used = CardService.check_service(self.engine, self._logged_in_user)
+        last_used = CardManagementService.check_service(self.engine, self._logged_in_user)
         if last_used[0][0]:
             self._used_card = card_named_tuple(CrudRepo(self.engine, CardTable).find_by_id_choose_columns(
                 last_used[0][0],
-                (CardTable.id, CardTable.card_number, CardTable.valid_thru, CardTable.card_name, CardTable.card_type)))
+                (CardTable.id, CardTable.card_number, CardTable.valid_thru,
+                 CardTable.card_name, CardTable.card_type, CardTable.main_currency)))
             if print_card:
                 print(f'\n{" " * 12}{self._used_card.card_name} Type: {self._used_card.card_type} '
                       f'Number: *{self._used_card.card_number[-4:]}')
+        else:
+            self._used_card = None
 
     def _choose_operation(self):
         print("""
@@ -60,8 +64,8 @@ class BussinesLogic:
                 self._sequence = 10
             case '2':
                 if AccountService.check_service(self.engine, self._logged_in_user):
-                    if not CardService.check_service(self.engine, self._logged_in_user)[0][0]:
-                        CardService.user_without_card(self.engine, self._logged_in_user)
+                    if not CardManagementService.check_service(self.engine, self._logged_in_user)[0][0]:
+                        CardManagementService.user_without_card(self.engine, self._logged_in_user)
                         self._sequence = 15
                     else:
                         self._sequence = 15
@@ -145,7 +149,6 @@ class BussinesLogic:
                 self._choose_operation()
 
     def _card_operations(self):
-        # dopisac metode ktora sprawdza czy karta nie jest przeterminowana
         self._get_last_used_account(False)
         self._get_last_used_card()
         print("""
@@ -160,40 +163,73 @@ class BussinesLogic:
             8. Set the card limit
             9. Show PIN
            10. Security
-           11. Go back
+           11. Remove the card
+           12. Go back
             """)
         chosen_operation = get_answer(
             validation_chosen_operation,
             'Enter chosen operation: ',
             'Entered data contains illegal characters. Try again: ',
-            (1, 11))
+            (1, 12))
         match chosen_operation:
             case '1':
                 if self._used_card:
-                    CardService.switch_cards(self.engine, self._logged_in_user.id)
+                    CardManagementService.switch_cards(self.engine, self._logged_in_user.id)
                 else:
-                    print(f"\n{' ' * 12}You cannot switch cards. You need a foreign currency account with a card. "
-                          f"Check if you have both.")
+                    print(f"\n{' ' * 12}You cannot switch cards. "
+                          f"Open a card for currency transactions to be able to perform operations.")
             case '2':
-                CardService.pay_by_card(self.engine, self._used_card, self._logged_in_user)
+                if self._used_card:
+                    CardTransactionsService.pay_by_card(self.engine, self._used_card, self._logged_in_user)
+                else:
+                    print(f"\n{' ' * 12}You cannot pay by card. "
+                          f"Open a card for currency transactions to be able to perform operations.")
             case '3':
-                if CardService.add_card_type(self.engine, self._logged_in_user.id):
-                    CardService.update_service_after_adding_card(self.engine, self._logged_in_user.id)
+                if CardManagementService.add_card_type(self.engine, self._logged_in_user.id):
+                    CardManagementService.update_service_after_adding_card(self.engine, self._logged_in_user.id)
             case '4':
-                pass
+                if self._used_card:
+                    CardTransactionsService.withdraw_money(self.engine, self._used_card, self._logged_in_user)
+                else:
+                    print(f"\n{' ' * 12}You cannot withdraw the money. "
+                          f"Open a card for currency transactions to be able to perform operations.")
             case '5':
-                pass
+                if self._used_card:
+                    CardTransactionsService.deposit_money(self.engine, self._used_card, self._logged_in_user)
+                else:
+                    print(f"\n{' ' * 12}You cannot withdraw the money. "
+                          f"Open a card for currency transactions to be able to perform operations.")
             case '6':
-                pass
+                if self._used_card:
+                    print(f"\n{' ' * 12}Card number:{self._used_card.card_number} "
+                          f"Valid thru: {self._used_card.valid_thru} Card name: {self._used_card.card_name} "
+                          f"Card type: {self._used_card.card_type} Main currency: {self._used_card.main_currency}")
+                else:
+                    print(f"\n{' ' * 12}You don't have any card. Get a card to see the details.")
             case '7':
-                pass
+                if self._used_card:
+                    CardManagementService.block_card(self.engine, self._used_card)
+                else:
+                    print(f"\n{' ' * 12}You don't have any card.")
             case '8':
-                pass
+                if self._used_card:
+                    CardManagementService.set_card_limit(self.engine, self._used_card)
+                else:
+                    print(f"\n{' ' * 12}You don't have any card.")
             case '9':
-                pass
+                if self._used_card:
+                    CardManagementService.show_pin(self.engine, self._used_card, self._logged_in_user)
+                else:
+                    print(f"\n{' ' * 12}You don't have any card.")
             case '10':
                 pass
             case '11':
+                if self._used_card:
+                    CardManagementService.delete_card(self.engine, self._used_card, self._logged_in_user)
+                    print(f"\n{' ' * 12}Your card has been removed.")
+                else:
+                    print(f"\n{' ' * 12}You don't have any card.")
+            case '12':
                 self._choose_operation()
 
     def cycle(self):

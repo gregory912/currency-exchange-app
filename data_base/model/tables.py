@@ -1,7 +1,6 @@
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, Date, ForeignKey
 
-
 base = declarative_base()
 
 
@@ -41,10 +40,10 @@ class CardTable(base):
     valid_thru = Column(Date, nullable=False)
     cvv = Column(String(3), nullable=False)
     blocked = Column(Boolean, default=False)
-    daily_limit = Column(Integer, default=1000)
-    internet_limit = Column(Integer, default=5000)
+    daily_limit = Column(Integer, default=2000)
+    internet_limit = Column(Integer, default=1000)
     contactless_limit = Column(Integer, default=100)
-    card_pin = Column(String(4), nullable=False)
+    card_pin = Column(String(4))
     sec_online_transactions = Column(Boolean, default=True)
     sec_location = Column(Boolean, default=False)
     sec_magnetic_strip = Column(Boolean, default=False)
@@ -55,7 +54,8 @@ class CardTable(base):
     main_currency = Column(String(3), nullable=False)
 
     user_data_to_cards = relationship("UserDataTable", back_populates="cards_to_user_data")
-    card_transactions_to_cards = relationship("CardTransactionTable", back_populates="cards_to_card_transactions")
+    card_transactions_to_cards = relationship("CardTransactionTable", back_populates="cards_to_card_transactions",
+                                              cascade="all, delete", passive_deletes=True)
 
 
 class UserAccountTable(base):
@@ -81,12 +81,13 @@ class CardTransactionTable(base):
     commission = Column(Numeric(precision=3, scale=2))
     balance = Column(Numeric(precision=8, scale=2))
     payer_name = Column(String(50), nullable=False)
-    id_card = Column(Integer, ForeignKey('cards.id'), nullable=False)
-    payout = Column(String(3), nullable=False)
-    payment = Column(String(3), nullable=False)
+    id_card = Column(Integer, ForeignKey('cards.id', ondelete='SET NULL'), nullable=False)
+    payout = Column(String(3))
+    payment = Column(String(3))
     rate_to_main_currency = Column(Numeric(precision=3, scale=2), nullable=False)
     transaction_type = Column(String(50), nullable=False)
     rate = Column(Numeric(precision=3, scale=2))
+    payer_account_number = Column(String(26))
 
     user_accounts_to_card_transactions = relationship(
         "UserAccountTable", back_populates="card_transactions_to_user_accounts")

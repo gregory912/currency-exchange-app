@@ -132,18 +132,32 @@ class TransactionService:
                         transaction.balance,
                         ""
                     )))
-            else:
-                filtred_transactions.append(all_transactions_named_tuple((
-                    transaction.transaction_time,
-                    transaction.payer_name,
-                    "",
-                    CrudRepo(engine, CardTable).find_by_id(transaction.id_card)[2],
-                    transaction.amount,
-                    "",
-                    transaction.rate,
-                    transaction.balance,
-                    transaction.commission
-                )))
+            elif type(transaction).__name__ == 'CardTransaction':
+                card_number = CrudRepo(engine, CardTable).find_by_id(transaction.id_card)
+                if transaction.payout == 'YES':
+                    filtred_transactions.append(all_transactions_named_tuple((
+                        transaction.transaction_time,
+                        transaction.payer_name,
+                        "",
+                        card_number[2] if card_number else "NOT EXIST",
+                        transaction.amount,
+                        "",
+                        transaction.rate,
+                        transaction.balance,
+                        transaction.commission
+                    )))
+                else:
+                    filtred_transactions.append(all_transactions_named_tuple((
+                        transaction.transaction_time,
+                        transaction.payer_name,
+                        transaction.payer_account_number,
+                        card_number[2] if card_number else "NOT EXIST",
+                        "",
+                        transaction.amount,
+                        transaction.rate,
+                        transaction.balance,
+                        transaction.commission
+                    )))
         return filtred_transactions
 
     @staticmethod

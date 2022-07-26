@@ -26,11 +26,12 @@ def upgrade() -> None:
 
 
     ### TABLE CARD TRANSACTION ###
-    op.add_column('card_transactions', sa.Column('payout', sa.String(3), nullable=False))
-    op.add_column('card_transactions', sa.Column('payment', sa.String(3), nullable=False))
+    op.add_column('card_transactions', sa.Column('payout', sa.String(3)))
+    op.add_column('card_transactions', sa.Column('payment', sa.String(3)))
     op.add_column('card_transactions', sa.Column('rate_to_main_currency', sa.Numeric(precision=3, scale=2), nullable=False))
     op.add_column('card_transactions', sa.Column('transaction_type', sa.String(50), nullable=False))
     op.add_column('card_transactions', sa.Column('rate', sa.Numeric(precision=3, scale=2)))
+    op.add_column('card_transactions', sa.Column('payer_account_number', sa.String(26)))
 
 
 
@@ -49,3 +50,4 @@ def downgrade() -> None:
     op.drop_column('card_transactions', 'rate_to_main_currency')
     op.drop_column('card_transactions', 'transaction_type')
     op.drop_column('card_transactions', 'rate')
+    op.drop_column('card_transactions', 'payer_account_number')
