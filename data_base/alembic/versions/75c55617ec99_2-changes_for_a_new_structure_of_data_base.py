@@ -17,7 +17,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    ### TABLE USER_DATA ###
+    """TABLE USER_DATA"""
     op.drop_constraint(constraint_name="user_data_ibfk_1",
                        table_name="user_data",
                        type_="foreignkey")
@@ -26,8 +26,9 @@ def upgrade() -> None:
     op.add_column('user_data', sa.Column('login', sa.String(50), nullable=False, unique=True))
     op.add_column('user_data', sa.Column('password', sa.String(200), nullable=False))
     op.add_column('user_data', sa.Column('creation_date', sa.DateTime(timezone=False), nullable=False))
+    op.add_column('user_data', sa.Column('main_currency', sa.String(3), nullable=False))
 
-    ### TABLE CARD_TRANSACTIONS ###
+    """TABLE CARD_TRANSACTIONS"""
     op.add_column('card_transactions', sa.Column('id_card', sa.Integer))
     op.create_foreign_key(
         constraint_name="card_transactions_ibfk_2",
@@ -37,19 +38,19 @@ def upgrade() -> None:
         remote_cols=['id'],
         ondelete="SET NULL")
 
-    ### TABLE CURRENCY INCOMES ###
+    """TABLE CURRENCY INCOMES"""
     op.drop_constraint(constraint_name="currency_incomes_ibfk_1",
                        table_name="currency_incomes",
                        type_="foreignkey")
     op.drop_table('currency_incomes')
 
-    ### TABLE CURRENCY EXPENSES ###
+    """TABLE CURRENCY EXPENSES"""
     op.drop_constraint(constraint_name="currency_expenses_ibfk_1",
                        table_name="currency_expenses",
                        type_="foreignkey")
     op.drop_table('currency_expenses')
 
-    ### TABLE CURRENCY EXCHANGES ###
+    """TABLE CURRENCY EXCHANGES"""
     op.create_table(
         'currency_exchanges',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
@@ -62,13 +63,15 @@ def upgrade() -> None:
         sa.Column('exchange_rate_in', sa.Numeric(precision=3, scale=2)),
         sa.Column('balance_in', sa.Numeric(precision=8, scale=2)),
         sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
+        sa.Column('amount_in_main_user_currency', sa.Numeric(precision=8, scale=2)),
+        sa.Column('commission_in_main_user_currency', sa.Numeric(precision=6, scale=2)),
         sa.ForeignKeyConstraint(['id_user_account_out'], ['user_accounts.id']),
         sa.ForeignKeyConstraint(['id_user_account_in'], ['user_accounts.id'])
     )
 
 
 def downgrade() -> None:
-    ### TABLE USER_DATA ###
+    """TABLE USER_DATA"""
     op.create_table(
         'users',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
@@ -79,6 +82,7 @@ def downgrade() -> None:
     op.drop_column('user_data', 'login')
     op.drop_column('user_data', 'password')
     op.drop_column('user_data', 'creation_date')
+    op.drop_column('user_data', 'main_currency')
     op.add_column('user_data', sa.Column('id_user', sa.Integer, nullable=False, unique=True))
     op.create_foreign_key(
         constraint_name="user_data_ibfk_2",
@@ -87,13 +91,13 @@ def downgrade() -> None:
         local_cols=['id_user'],
         remote_cols=['id'])
 
-    ### TABLE CARD_TRANSACTIONS ###
+    """TABLE CARD_TRANSACTIONS"""
     op.drop_constraint(constraint_name="card_transactions_ibfk_2",
                        table_name="card_transactions",
                        type_="foreignkey")
     op.drop_column('card_transactions', 'id_card')
 
-    ### TABLE CURRENCY EXCHANGES ###
+    """TABLE CURRENCY EXCHANGES"""
     op.drop_constraint(constraint_name="currency_exchanges_ibfk_1",
                        table_name="currency_exchanges",
                        type_="foreignkey")
@@ -102,7 +106,7 @@ def downgrade() -> None:
                        type_="foreignkey")
     op.drop_table('currency_exchanges')
 
-    ### TABLE CURRENCY INCOMES ###
+    """TABLE CURRENCY INCOMES"""
     op.create_table(
         'currency_incomes',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
@@ -114,7 +118,7 @@ def downgrade() -> None:
         sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])
     )
 
-    ### TABLE CURRENCY EXPENSES ###
+    """TABLE CURRENCY EXPENSES"""
     op.create_table(
         'currency_expenses',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),

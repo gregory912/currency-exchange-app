@@ -1,19 +1,19 @@
-from sqlalchemy import create_engine
 from management.services.login_service import Login
 from management.services.account_service import AccountService
 from management.services.currency_exchange_service import CurrencyExchangeService
 from management.services.transactions_service import TransactionService
 from management.services.card_transactions_service import CardTransactionsService
 from management.services.card_management_service import CardManagementService
+from management.validation import get_answer, validation_chosen_operation
+from management.conversions import user_account_named_tuple, used_card_named_tuple, user_data_named_tuple
 from data_base.repository.crud_repo import CrudRepo
 from data_base.model.tables import UserAccountTable, CardTable
-from management.validation import *
-from management.conversions import *
+from sqlalchemy import create_engine
 
 
 class BussinesLogic:
     def __init__(self):
-        self.username = 'user' #wprowadzic dane z pliku yml?
+        self.username = 'user'  #wprowadzic dane z pliku yml?
         self.password = 'user1234'
         self.database = 'currency_exchange_app'
         self.port = 3309
@@ -35,7 +35,7 @@ class BussinesLogic:
     def _get_last_used_card(self, print_card: bool = True):
         last_used = CardManagementService.check_service(self.engine, self._logged_in_user)
         if last_used[0][0]:
-            self._used_card = card_named_tuple(CrudRepo(self.engine, CardTable).find_by_id_choose_columns(
+            self._used_card = used_card_named_tuple(CrudRepo(self.engine, CardTable).find_by_id_choose_columns(
                 last_used[0][0],
                 (CardTable.id, CardTable.card_number, CardTable.valid_thru,
                  CardTable.card_name, CardTable.card_type, CardTable.main_currency)))
@@ -112,7 +112,7 @@ class BussinesLogic:
                         AccountService.update_service(self.engine, self._logged_in_user.id)
             case '3':
                 if self._used_account:
-                    CurrencyExchangeService().transaction(self.engine, self._logged_in_user.id, self._used_account)
+                    CurrencyExchangeService().transaction(self.engine, self._logged_in_user, self._used_account)
                 else:
                     print(f"\n{' ' * 12}You cannot make transactions because you don't have any account. "
                           f"Open a foreign currency account.")
@@ -137,7 +137,7 @@ class BussinesLogic:
                           f"Open a foreign currency account.")
             case '7':
                 if self._used_account:
-                    TransactionService().last_transactions(self.engine, self._used_account)
+                    TransactionService().last_transactions(self.engine, self._used_account, self._logged_in_user)
                 else:
                     print(f"\n{' ' * 12}You cannot see last transactions because you don't have any account. "
                           f"Open a foreign currency account.")

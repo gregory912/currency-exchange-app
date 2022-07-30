@@ -1,47 +1,65 @@
-import requests
-import json
-from management.validation import *
-from management.conversions import *
-from data_base.model.tables import UserAccountTable, CurrencyExchangeTable, ApiRequestTable
-from decimal import Decimal
+from management.validation import get_answer, validation_chosen_operation, validation_decimal
+from management.conversions import user_account_named_tuple, namedtuple
+from data_base.model.tables import UserAccountTable, CurrencyExchangeTable, UserDataTable
 from data_base.repository.crud_repo import CrudRepo
+from data_base.repository.user_account_repo import UserAccountRepo
 from datetime import datetime
+from requests import request
+from json import loads
+from decimal import Decimal
 
 
 class CurrencyExchangeService:
     def __init__(self):
         self.cur_exch_obj = CurrencyExchange()
 
-    def transaction(self, engine, id_user_data: int, used_account: namedtuple):
-        accounts = self.available_accounts(engine, id_user_data, used_account)
+    def transaction(self, engine, logged_in_user: namedtuple, used_account: namedtuple):
+        """Perform currency exchange transactions. Take account of account availability and account balance.
+        Get commissions if required. Transfer money from one account to another with information about the rate
+        and balance after the operation.
+        amount_out ---> amount in main user currency - commission ---> amount in"""
+        accounts = self._available_accounts(engine, logged_in_user.id, used_account)
         if not accounts:
             print(f"\n{' ' * 12}You don't have any account other than your main account. "
                   f"Create a new account to be able to exchange currencies")
         else:
-            chosen_operation = get_answer(
-                validation_chosen_operation,
-                'Select the currency for which you want to perform currency exchange: ',
-                'Entered data contains illegal characters. Try again: ',
-                (1, len(accounts)))
-            amount = get_answer(
-                validation_decimal,
-                'Enter the amount: ',
-                'Entered data contains illegal characters. Try again: ')
-            if Decimal(amount) > used_account.balance:
+            if used_account.balance == 0:
                 print(f"\n{' ' * 12}You do not have enough funds on your account to perform this operation.")
             else:
-                if self.check_number_of_api_queries(engine):
-                    transaction_account = accounts[int(chosen_operation)-1]
-                    self.cur_exch_obj.get_result(used_account.currency, transaction_account.currency, amount)
-                    exchange = self.cur_exch_obj.unpack_data()
+                chosen_operation = get_answer(
+                    validation_chosen_operation,
+                    'Select the currency for which you want to perform currency exchange: ',
+                    'Entered data contains illegal characters. Try again: ',
+                    (1, len(accounts)))
+                amount = Decimal(get_answer(
+                    validation_decimal,
+                    'Enter the amount: ',
+                    'Entered data contains illegal characters. Try again: '))
+                if amount > used_account.balance:
+                    print(f"\n{' ' * 12}You do not have enough funds on your account to perform this operation.")
+                else:
+                    transaction_account = accounts[int(chosen_operation) - 1]
+                    if logged_in_user.main_currency != used_account.currency:
+                        amount_in_main_user_currency = Decimal(self.cur_exch_obj.get_result(
+                            used_account.currency, logged_in_user.main_currency, str(amount))['result'])
+                    else:
+                        amount_in_main_user_currency = amount
+                    amt_after_checking, commission_after_checking = CurrencyExchangeService._check_commision(
+                        engine, amount_in_main_user_currency, logged_in_user.id, logged_in_user.main_currency)
+                    exchanged_amount = self.cur_exch_obj.get_result(
+                        logged_in_user.main_currency, transaction_account.currency, str(amt_after_checking))['result']
+                    rate_acc_to_trans = self.cur_exch_obj.get_result(
+                        used_account.currency, transaction_account.currency, str(1))['info']['rate']
+                    rate_trans_to_acc = self.cur_exch_obj.get_result(
+                        transaction_account.currency, used_account.currency, str(1))['info']['rate']
                     exch_cur_out = {
-                        'rate': exchange['rate'],
+                        'rate': rate_acc_to_trans,
                         'amount': amount,
                         'balance': used_account.balance-Decimal(amount)}
                     exch_cur_in = {
-                        'rate': round(float(amount)/float(exchange['amount']), 5),
-                        'amount': round(exchange['amount'], 3),
-                        'balance': round(transaction_account.balance+Decimal(exchange['amount']), 3)}
+                        'rate': rate_trans_to_acc,
+                        'amount': exchanged_amount,
+                        'balance': round(transaction_account.balance+Decimal(exchanged_amount), 3)}
                     CrudRepo(engine, UserAccountTable).update_by_id(
                         used_account.id,
                         id=used_account.id,
@@ -65,46 +83,32 @@ class CurrencyExchangeService:
                         transfer_amount_in=exch_cur_in['amount'],
                         exchange_rate_in=exch_cur_in['rate'],
                         balance_in=exch_cur_in['balance'],
-                        transaction_time=datetime.now()
+                        transaction_time=datetime.now(),
+                        amount_in_main_user_currency=amount_in_main_user_currency,
+                        commission_in_main_user_currency=commission_after_checking
                     )
                     print(f"\n{' ' * 12}The transaction was successful.")
-                else:
-                    print(f'\n{" " * 12}Unfortunately we are unable to make an exchange. '
-                          'Query limit for today has been exhausted. Please try again tomorrow.')
 
     @staticmethod
-    def check_number_of_api_queries(engine):
-        """Check if the number of inquiries for a given day has not been exceeded"""
-        api_queries = CrudRepo(engine, ApiRequestTable).find_by_id(1)
-        if not api_queries:
-            CrudRepo(engine, ApiRequestTable).add(transactions_a_day=1, transactions_date=datetime.now())
-            return True
-        else:
-            if api_queries.transactions_date.strftime('%Y-%m-%d') != datetime.now().strftime('%Y-%m-%d'):
-                CrudRepo(engine, ApiRequestTable).update_by_id(
-                    1,
-                    transactions_a_day=1,
-                    transactions_date=datetime.now())
-                return True
-            elif api_queries.transactions_a_day == 250:
-                return False
-            else:
-                CrudRepo(engine, ApiRequestTable).update_by_id(
-                    1,
-                    transactions_a_day=api_queries.transactions_a_day + 1,
-                    transactions_date=api_queries.transactions_date)
-                return True
-
-    @staticmethod
-    def available_accounts(engine, id_user_data: int, used_account: namedtuple) -> list:
+    def _available_accounts(engine, id_user_data: int, used_account: namedtuple) -> list:
         """Get all accounts that can be used for currency exchange"""
-        # accounts = UserAccountRepo(engine, UserAccountTable).find_all_accounts(id_user_data)
         accounts = CrudRepo(engine, UserAccountTable).find_all_with_condition((
                 UserAccountTable.id_user_data, id_user_data))
         accounts_named_tuple = [user_account_named_tuple(acc) for acc in accounts if acc[3] != used_account.currency]
-        for x in range(0, len(accounts_named_tuple)):
-            print(f"{' ' * 12}", x + 1, ' ', accounts_named_tuple[x].currency)
+        for x, item in enumerate(accounts_named_tuple):
+            print(f"{' ' * 12}", x + 1, ' ', item.currency)
         return accounts_named_tuple
+
+    @staticmethod
+    def _check_commision(engine, amount: Decimal, id_user_data: int, currency: str) -> tuple:
+        """Check if a commission is required. The amount and commission are stated in the user's primary currency."""
+        all_exchanges = UserAccountRepo(engine, UserDataTable).get_monthly_exchanges_for_user(id_user_data)
+        transaction_sum = sum([item[2] for item in all_exchanges])
+        if transaction_sum + amount > 1000:
+            print(f"\n{' ' * 12}You have exceeded the monthly exchange limit of 1000 {currency}. "
+                  f"A commission of 0.5% of the entered amount has been charged.")
+            return amount - (amount * Decimal(0.005)), amount * Decimal(0.005)
+        return amount, 0
 
 
 class CurrencyExchange:
@@ -126,7 +130,7 @@ class CurrencyExchange:
 
     def get_request(self):
         """Send the query to the server"""
-        return requests.request("GET", self.url, headers=self.headers, data=self.payload)
+        return request("GET", self.url, headers=self.headers, data=self.payload)
 
     def unpack_data(self) -> dict:
         """Return the data in the appropriate form"""
@@ -137,9 +141,9 @@ class CurrencyExchange:
     @staticmethod
     def get_url(cur_1: str, cur_2: str, amount: str) -> str:
         """Get url to API for entered data"""
-        return f"https://api.apilayer.com/exchangerates_data/convert?to={cur_2}&from={cur_1}&amount={amount}"
+        return f"https://api.exchangerate.host/convert?from={cur_1}&to={cur_2}&amount={amount}"
 
     @staticmethod
     def loads(string_: str) -> dict:
         """Parse string to dict"""
-        return json.loads(string_)
+        return loads(string_)

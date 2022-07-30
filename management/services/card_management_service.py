@@ -1,12 +1,11 @@
-from management.validation import *
 from data_base.repository.crud_repo import CrudRepo
 from data_base.repository.card_repo import CardRepo
 from data_base.model.tables import *
-from random import randint
-from decimal import Decimal
-from management.conversions import *
+from management.conversions import used_card_named_tuple, card_named_tuple
 from management.security.security import Security
+from management.services.common import *
 from datetime import date
+from decimal import Decimal
 
 
 class CardManagementService:
@@ -30,7 +29,7 @@ class CardManagementService:
             validation_space_or_alpha_not_digit,
             'Enter the name of the card: ',
             'Entered data contains illegal characters. Try again: ')
-        card_type = CardManagementService.choose_card_type()
+        card_type = choose_card_type()
         if card_type == 'STANDARD':
             if CardRepo(engine, CardTable).join_cards(
                     UserDataTable,
@@ -80,9 +79,9 @@ class CardManagementService:
     def switch_cards(engine, id_user_data: int):
         """Show all available cards and select the card for which you want to make the transaction"""
         cards = CardRepo(engine, CardTable).find_all_cards(id_user_data)
-        cards_named_tuple = [card_named_tuple(card) for card in cards]
-        for x in range(0, len(cards_named_tuple)):
-            print(f"{' ' * 12}", x + 1, ' ', cards_named_tuple[x].card_name, ' ', cards_named_tuple[x].card_type)
+        cards_named_tuple = [used_card_named_tuple(card) for card in cards]
+        for x, item in enumerate(cards_named_tuple):
+            print(f"{' ' * 12}", x + 1, ' ', item.card_name, ' ', item.card_type)
         chosen_operation = get_answer(
             validation_chosen_operation,
             'Enter chosen operation: ',
@@ -119,7 +118,7 @@ class CardManagementService:
                 card_dict["blocked"] = value
                 CrudRepo(engine, CardTable).update_by_id(card.id, **card_dict)
                 print(f"{' ' * 12}Your card has been {word_2}.")
-        card = card_all_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+        card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
         if used_card.card_type != "SINGLE-USE VIRTUAL":
             if not card.blocked:
                 block_or_unlock("block", True, "blocked")
@@ -143,15 +142,18 @@ class CardManagementService:
                     validation_decimal,
                     'Enter the new limit: ',
                     'Entered data contains illegal characters. Try again: ')
-                card_dict = card._asdict()
-                card_dict[limit_type] = Decimal(new_limit)
-                CrudRepo(engine, CardTable).update_by_id(card.id, **card_dict)
-                print(f"{' ' * 12}Your limit has been updated.")
+                if Decimal(new_limit) < 10:
+                    print(f"{' ' * 12}The entered limit is too small.")
+                else:
+                    card_dict = card._asdict()
+                    card_dict[limit_type] = Decimal(new_limit)
+                    CrudRepo(engine, CardTable).update_by_id(card.id, **card_dict)
+                    print(f"{' ' * 12}Your limit has been updated.")
         if used_card.card_type == "STANDARD":
-            chosen_type = CardManagementService.choose_limit_card(used_card, 0, 3)
+            chosen_type = choose_limit_card(used_card, 0, 3)
         else:
-            chosen_type = CardManagementService.choose_limit_card(used_card, 100, 1)
-        card = card_all_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+            chosen_type = choose_limit_card(used_card, 100, 1)
+        card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
         if chosen_type == "Daily limit":
             set_limit("daily_limit", card.daily_limit)
         elif chosen_type == "Internet limit":
@@ -168,12 +170,12 @@ class CardManagementService:
                 password = input('Enter your password: ')
                 logged_in_user = CrudRepo(engine, UserDataTable).find_first_with_condition((UserDataTable.login, login))
                 if logged_in_user and Security.check_password(password, logged_in_user.password):
-                    card = card_all_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+                    card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
                     print(f"\n{' ' * 12}The pin for your card is: {card.card_pin}")
                 else:
                     print(f"\n{' ' * 12}The entered data is incorrect.")
             else:
-                print(f"\n{' ' * 12}The entered login differs from the login of the logged_in_user.")
+                print(f"\n{' ' * 12}The entered login differs from the login of the logged in user.")
         else:
             print(f"\n{' ' * 12}The pin is not required for internet cards.")
 
@@ -184,7 +186,7 @@ class CardManagementService:
         CrudRepo(engine, CardTable).delete_by_id(used_card.id)
         cards = CardRepo(engine, CardTable).find_all_cards(logged_in_user.id)
         if cards:
-            card = [card_named_tuple(account) for account in cards][0]
+            card = [used_card_named_tuple(account) for account in cards][0]
             service_row = CrudRepo(engine, ServiceTable).find_first_with_condition(
                 (ServiceTable.id_user_data, logged_in_user.id))
             CrudRepo(engine, ServiceTable).update_by_id(
@@ -207,13 +209,13 @@ class CardManagementService:
         CrudRepo(engine, CardTable).add(
             id_user_data=id_user_data,
             card_number=CardManagementService.generate_card_number(engine),
-            valid_thru=CardManagementService.get_new_date(3),
-            cvv=CardManagementService.generate_random_number(0, 3),
+            valid_thru=CardManagementService.get_date_with_first_day_of_month(3),
+            cvv=generate_random_number(0, 3),
             blocked=False if card_type != "SINGLE-USE VIRTUAL" else None,
             daily_limit=Decimal(2000),
             internet_limit=Decimal(1000) if card_type == "STANDARD" else None,
             contactless_limit=Decimal(100) if card_type == "STANDARD" else None,
-            card_pin=CardManagementService.generate_random_number(0, 4) if card_type == "STANDARD" else None,
+            card_pin=generate_random_number(0, 4) if card_type == "STANDARD" else None,
             sec_online_transactions=True,
             sec_location=True,
             sec_magnetic_strip=True if card_type == "STANDARD" else None,
@@ -221,84 +223,9 @@ class CardManagementService:
             sec_contactless=True if card_type == "STANDARD" else None,
             card_name=card_name,
             card_type=card_type,
-            main_currency=CardManagementService.choose_currency('Choose the main currency for your card')
+            main_currency=choose_currency('Choose the main currency for your card')
         )
         print(f"\n{' ' * 12}Your card has been added.")
-
-    @staticmethod
-    def choose_card_type() -> str:
-        """Select the type of card you want to get"""
-        print("""
-            Select the type of card you want to create: 
-            1. STANDARD
-            2. SINGLE-USE VIRTUAL
-            3. MULTI-USE VIRTUAL
-            """)
-        chosen_operation = get_answer(
-            validation_chosen_operation,
-            'Enter chosen card type: ',
-            'Entered data contains illegal characters. Try again: ',
-            (1, 3))
-        match chosen_operation:
-            case '1':
-                return 'STANDARD'
-            case '2':
-                return 'SINGLE-USE VIRTUAL'
-            case '3':
-                return 'MULTI-USE VIRTUAL'
-
-    @staticmethod
-    def choose_currency(text: str) -> str:
-        """Select the currency for which you want to perform the operation"""
-        print(f"""
-            {text}: 
-            1. GBP
-            2. USD
-            3. CHF
-            4. EUR
-            """)
-        chosen_operation = get_answer(
-            validation_chosen_operation,
-            'Enter chosen currency: ',
-            'Entered data contains illegal characters. Try again: ',
-            (1, 4))
-        match chosen_operation:
-            case '1':
-                return 'GBP'
-            case '2':
-                return 'USD'
-            case '3':
-                return 'CHF'
-            case '4':
-                return 'EUR'
-
-    @staticmethod
-    def choose_limit_card(used_card: namedtuple, last_letter: int, operation_range: int) -> str:
-        """Select the type of transaction you want to perform"""
-        text = """
-                Select the type of card limit you want to change: 
-                1. Daily limit
-                2. Internet limit
-                3. Contactless limit
-                """
-        print(text[:last_letter]) if used_card.card_type == "SINGLE-USE VIRTUAL" else print(text)
-        chosen_operation = get_answer(
-            validation_chosen_operation,
-            'Enter chosen limit type: ',
-            'Entered data contains illegal characters. Try again: ',
-            (1, operation_range))
-        match chosen_operation:
-            case '1':
-                return 'Daily limit'
-            case '2':
-                return 'Internet limit'
-            case '3':
-                return 'Contactless limit'
-
-    @staticmethod
-    def generate_random_number(range_min: int, range_max: int) -> str:
-        """Generate a random number that can be used to simulate some number"""
-        return ''.join([str(randint(0, 9)) for _ in range(range_min, range_max)])
 
     @staticmethod
     def generate_card_number(engine) -> str:
@@ -309,8 +236,7 @@ class CardManagementService:
                 return account_number
 
     @staticmethod
-    def get_new_date(years: int) -> date:
+    def get_date_with_first_day_of_month(years: int) -> date:
         """Create an expiration date for the card. Add the indicated number of years"""
         today_date = date.today()
         return date(today_date.year + years, today_date.month, 1)
-

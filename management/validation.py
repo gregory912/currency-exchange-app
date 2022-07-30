@@ -1,5 +1,5 @@
-import re
-import os
+from re import match
+from os import path
 from typing import Callable
 from datetime import datetime
 
@@ -40,12 +40,12 @@ def validation_space_or_alpha_not_digit(entered_item: str) -> bool:
 
 def validation_decimal(entered_item: str) -> bool:
     """Check if the entered number is Decimal"""
-    return True if re.match(r'\d+\.\d+', entered_item) or entered_item.isdigit() else False
+    return True if match(r'\d+\.\d+', entered_item) or entered_item.isdigit() else False
 
 
 def validation_email(entered_item: str) -> bool:
     """Check if the value provided is an email address"""
-    return True if re.match(r'^\S+@\S+\.\S+$', entered_item) else False
+    return True if match(r'^\S+@\S+\.\S+$', entered_item) else False
 
 
 def validation_chosen_operation(entered_item: str, min_range: int, max_range: int) -> bool:
@@ -68,7 +68,7 @@ def validation_file_name(entered_item: str):
 
 def validation_file_path(entered_item: str):
     """Check if entered path exist"""
-    return True if os.path.exists(entered_item) else False
+    return True if path.exists(entered_item) else False
 
 
 def validation_datetime(entered_item: str):

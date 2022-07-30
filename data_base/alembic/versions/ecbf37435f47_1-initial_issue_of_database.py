@@ -82,7 +82,7 @@ def upgrade() -> None:
         sa.Column('id_user_account', sa.Integer, nullable=False),
         sa.Column('transaction_time', sa.DateTime(timezone=False), nullable=False),
         sa.Column('amount', sa.Numeric(precision=8, scale=2)),
-        sa.Column('commission', sa.Numeric(precision=3, scale=2)),
+        sa.Column('commission_in_main_user_currency', sa.Numeric(precision=6, scale=2)),
         sa.Column('balance', sa.Numeric(precision=8, scale=2)),
         sa.Column('payer_name', sa.String(50), nullable=False),
         sa.ForeignKeyConstraint(['id_user_account'], ['user_accounts.id'])

@@ -17,7 +17,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    ### TABLE API_REQUESTS ###
     op.create_table(
         'api_requests',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),

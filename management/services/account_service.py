@@ -1,11 +1,12 @@
-from management.validation import *
 from data_base.repository.crud_repo import CrudRepo
 from data_base.repository.user_account_repo import UserAccountRepo
 from data_base.model.tables import *
+from management.services.common import choose_currency
+from management.conversions import *
+from management.validation import *
+from datetime import datetime
 from random import randint
 from decimal import Decimal
-from management.conversions import *
-from datetime import datetime
 
 
 class AccountService:
@@ -15,8 +16,8 @@ class AccountService:
         accounts = CrudRepo(engine, UserAccountTable).find_all_with_condition((
                 UserAccountTable.id_user_data, id_user_data))
         accounts_named_tuple = [user_account_named_tuple(account) for account in accounts]
-        for x in range(0, len(accounts_named_tuple)):
-            print(f"{' ' * 12}", x+1, ' ', accounts_named_tuple[x].currency, ' ', accounts_named_tuple[x].balance)
+        for x, item in enumerate(accounts_named_tuple):
+            print(f"{' ' * 12}", x+1, ' ', item.currency, ' ', item.balance)
         chosen_operation = get_answer(
             validation_chosen_operation,
             'Enter chosen operation: ',
@@ -49,7 +50,7 @@ class AccountService:
     @staticmethod
     def add_account(engine, id_user_data: int) -> bool:
         """Add a new currency account. Check if the account already not exists"""
-        currency = AccountService.choose_currency()
+        currency = choose_currency("Select the currency for which you want to open an account:")
         if UserAccountRepo(engine, UserAccountTable).check_if_account_exist(id_user_data, currency):
             return True
         else:
@@ -86,31 +87,6 @@ class AccountService:
             if not CrudRepo(engine, UserAccountTable).find_first_with_condition(
                     (UserAccountTable.account_number, account_number)):
                 return account_number
-
-    @staticmethod
-    def choose_currency() -> str:
-        """Select the currency for which you want to perform the operation"""
-        print("""
-            Select the currency for which you want to open an account: 
-            1. GBP
-            2. USD
-            3. CHF
-            4. EUR
-            """)
-        chosen_operation = get_answer(
-            validation_chosen_operation,
-            'Enter chosen operation: ',
-            'Entered data contains illegal characters. Try again: ',
-            (1, 4))
-        match chosen_operation:
-            case '1':
-                return 'GBP'
-            case '2':
-                return 'USD'
-            case '3':
-                return 'CHF'
-            case '4':
-                return 'EUR'
 
     @staticmethod
     def add_money(engine, used_account: namedtuple):
@@ -154,41 +130,44 @@ class AccountService:
     @staticmethod
     def transfer_money(engine, used_account: namedtuple):
         """Transfer money to another account"""
-        transfer_title = get_answer(
-            validation_space_or_alpha_not_digit,
-            'Enter the transfer title: ',
-            'Entered data contains illegal characters. Try again: ')
-        amount = get_answer(
-            validation_decimal,
-            'Enter the amount: ',
-            'Entered data contains illegal characters. Try again: ')
-        payer_name = get_answer(
-            validation_alpha,
-            'Enter the payer name: ',
-            'Entered data contains illegal characters. Try again: ')
-        payer_acc_number = get_answer(
-            validation_digit,
-            'Enter the payer account number: ',
-            'Entered data is not correct. The number should contain between 20 - 26 digits. Try again: ',
-            (20, 26))
-        balance = used_account.balance - Decimal(amount)
-        if balance < 0:
+        if used_account.balance == 0:
             print(f"\n{' ' * 12}You do not have sufficient funds in your account")
         else:
-            CrudRepo(engine, UserAccountTable).update_by_id(
-                used_account.id,
-                id=used_account.id,
-                id_user_data=used_account.id_user_data,
-                account_number=used_account.account_number,
-                currency=used_account.currency,
-                balance=balance)
-            CrudRepo(engine, TransactionTable).add(
-                id_user_account=used_account.id,
-                payment='NO',
-                payout='YES',
-                transfer_title=transfer_title,
-                transaction_time=datetime.now(),
-                amount=Decimal(amount),
-                balance=balance,
-                payer_name=payer_name,
-                payer_account_number=payer_acc_number)
+            amount = get_answer(
+                validation_decimal,
+                'Enter the amount: ',
+                'Entered data contains illegal characters. Try again: ')
+            balance = used_account.balance - Decimal(amount)
+            if balance < 0:
+                print(f"\n{' ' * 12}You do not have sufficient funds in your account")
+            else:
+                transfer_title = get_answer(
+                    validation_space_or_alpha_not_digit,
+                    'Enter the transfer title: ',
+                    'Entered data contains illegal characters. Try again: ')
+                payer_name = get_answer(
+                    validation_alpha,
+                    'Enter the payer name: ',
+                    'Entered data contains illegal characters. Try again: ')
+                payer_acc_number = get_answer(
+                    validation_digit,
+                    'Enter the payer account number: ',
+                    'Entered data is not correct. The number should contain between 20 - 26 digits. Try again: ',
+                    (20, 26))
+                CrudRepo(engine, UserAccountTable).update_by_id(
+                    used_account.id,
+                    id=used_account.id,
+                    id_user_data=used_account.id_user_data,
+                    account_number=used_account.account_number,
+                    currency=used_account.currency,
+                    balance=balance)
+                CrudRepo(engine, TransactionTable).add(
+                    id_user_account=used_account.id,
+                    payment='NO',
+                    payout='YES',
+                    transfer_title=transfer_title,
+                    transaction_time=datetime.now(),
+                    amount=Decimal(amount),
+                    balance=balance,
+                    payer_name=payer_name,
+                    payer_account_number=payer_acc_number)

@@ -16,6 +16,7 @@ class UserDataTable(base):
     login = Column(String(50), nullable=False, unique=True)
     password = Column(String(50), nullable=False)
     creation_date = Column(DateTime(timezone=False), nullable=False)
+    main_currency = Column(String(3), nullable=False)
 
     services_to_user_data = relationship("ServiceTable", back_populates="user_data_to_services", uselist=False)
     cards_to_user_data = relationship("CardTable", back_populates="user_data_to_cards")
@@ -78,16 +79,17 @@ class CardTransactionTable(base):
     id_user_account = Column(Integer, ForeignKey('user_accounts.id'), nullable=False)
     transaction_time = Column(DateTime(timezone=False), nullable=False)
     amount = Column(Numeric(precision=8, scale=2))
-    commission = Column(Numeric(precision=3, scale=2))
+    commission_in_main_user_currency = Column(Numeric(precision=6, scale=2))
     balance = Column(Numeric(precision=8, scale=2))
     payer_name = Column(String(50), nullable=False)
     id_card = Column(Integer, ForeignKey('cards.id', ondelete='SET NULL'), nullable=False)
     payout = Column(String(3))
     payment = Column(String(3))
-    rate_to_main_currency = Column(Numeric(precision=3, scale=2), nullable=False)
+    rate_to_main_card_currency = Column(Numeric(precision=3, scale=2), nullable=False)
     transaction_type = Column(String(50), nullable=False)
-    rate = Column(Numeric(precision=3, scale=2))
+    rate_tu_used_account = Column(Numeric(precision=3, scale=2))
     payer_account_number = Column(String(26))
+    amount_in_main_user_currency = Column(Numeric(precision=8, scale=2))
 
     user_accounts_to_card_transactions = relationship(
         "UserAccountTable", back_populates="card_transactions_to_user_accounts")
@@ -107,6 +109,8 @@ class CurrencyExchangeTable(base):
     exchange_rate_in = Column(Numeric(precision=3, scale=2))
     balance_in = Column(Numeric(precision=8, scale=2))
     transaction_time = Column(DateTime(timezone=False), nullable=False)
+    amount_in_main_user_currency = Column(Numeric(precision=8, scale=2))
+    commission_in_main_user_currency = Column(Numeric(precision=6, scale=2))
 
     user_accounts_to_currency_exchanges_out = relationship("UserAccountTable", foreign_keys=[id_user_account_out])
     user_accounts_to_currency_exchanges_in = relationship("UserAccountTable", foreign_keys=[id_user_account_in])
@@ -126,9 +130,3 @@ class TransactionTable(base):
     payer_account_number = Column(String(26), nullable=False)
     user_accounts_to_transactions = relationship("UserAccountTable", back_populates="transactions_to_user_accounts")
 
-
-class ApiRequestTable(base):
-    __tablename__ = 'api_requests'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    transactions_a_day = Column(Integer)
-    transactions_date = Column(DateTime(timezone=False))

@@ -2,7 +2,8 @@ from collections import namedtuple
 
 
 def user_data_named_tuple(items):
-    UserData = namedtuple("UserData", "id name surname country address email phone login password creation_date")
+    UserData = namedtuple("UserData",
+                          "id name surname country address email phone login password creation_date main_currency")
     return UserData(*items)
 
 
@@ -16,14 +17,14 @@ def dates_named_tuple(items):
     return Dates(*items)
 
 
+def used_card_named_tuple(items):
+    UsedCard = namedtuple("UsedCard", "id card_number valid_thru card_name card_type main_currency")
+    return UsedCard(*items)
+
+
 def card_named_tuple(items):
-    Card = namedtuple("Card", "id card_number valid_thru card_name card_type main_currency")
-    return Card(*items)
-
-
-def card_all_named_tuple(items):
-    CardAll = namedtuple(
-        "CardAll",
+    Card = namedtuple(
+        "Card",
         "id "
         "id_user_data "
         "card_number "
@@ -41,7 +42,7 @@ def card_all_named_tuple(items):
         "card_name "
         "card_type "
         "main_currency")
-    return CardAll(*items)
+    return Card(*items)
 
 
 def currency_exchange_named_tuple(items):
@@ -56,7 +57,9 @@ def currency_exchange_named_tuple(items):
         "transfer_amount_in "
         "exchange_rate_in "
         "balance_in "
-        "transaction_time")
+        "transaction_time "
+        "amount_in_main_user_currency "
+        "commission_in_main_user_currency")
     return ExchangeCurrency(*items)
 
 
@@ -67,16 +70,17 @@ def card_transaction_named_tuple(items):
         "id_user_account "
         "transaction_time "
         "amount "
-        "commission "
+        "commission_in_main_user_currency "
         "balance "
         "payer_name "
         "id_card "
         "payout "
         "payment "
-        "rate_to_main_currency "
+        "rate_to_main_card_currency "
         "transaction_type "
-        "rate "
-        "payer_account_number")
+        "rate_tu_used_account "
+        "payer_account_number "
+        "amount_in_main_user_currency")
     return CardTransaction(*items)
 
 
@@ -96,9 +100,9 @@ def transaction_named_tuple(items):
     return Transaction(*items)
 
 
-def all_transactions_named_tuple(items):
-    AllTransactions = namedtuple(
-        "AllTransactions",
+def transactions_to_statement_named_tuple(items):
+    TransactionsToStatement = namedtuple(
+        "TransactionsToStatement",
         "date "
         "customer "
         "acc_number "
@@ -108,6 +112,6 @@ def all_transactions_named_tuple(items):
         "rate "
         "saldo "
         "commission")
-    return AllTransactions(*items)
+    return TransactionsToStatement(*items)
 
 

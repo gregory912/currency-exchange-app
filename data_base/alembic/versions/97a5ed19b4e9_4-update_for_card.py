@@ -16,35 +16,34 @@ depends_on = None
 
 
 def upgrade() -> None:
-    ### TABLE SERVICE ###
+    """TABLE SERVICE"""
     op.add_column('services', sa.Column('card_id', sa.Integer, unique=True))
 
-    ### TABLE CARDS ###
+    """TABLE CARDS"""
     op.add_column('cards', sa.Column('card_name', sa.String(50), nullable=False))
     op.add_column('cards', sa.Column('card_type', sa.String(30), nullable=False))
     op.add_column('cards', sa.Column('main_currency', sa.String(3), nullable=False))
 
-
-    ### TABLE CARD TRANSACTION ###
+    """TABLE CARD TRANSACTION"""
     op.add_column('card_transactions', sa.Column('payout', sa.String(3)))
     op.add_column('card_transactions', sa.Column('payment', sa.String(3)))
-    op.add_column('card_transactions', sa.Column('rate_to_main_currency', sa.Numeric(precision=3, scale=2), nullable=False))
+    op.add_column('card_transactions', sa.Column('rate_to_main_card_currency', sa.Numeric(precision=3, scale=2), nullable=False))
     op.add_column('card_transactions', sa.Column('transaction_type', sa.String(50), nullable=False))
-    op.add_column('card_transactions', sa.Column('rate', sa.Numeric(precision=3, scale=2)))
+    op.add_column('card_transactions', sa.Column('rate_tu_used_account', sa.Numeric(precision=3, scale=2)))
     op.add_column('card_transactions', sa.Column('payer_account_number', sa.String(26)))
-
+    op.add_column('card_transactions', sa.Column('amount_in_main_user_currency', sa.Numeric(precision=8, scale=2)))
 
 
 def downgrade() -> None:
-    ### TABLE SERVICE ###
+    """TABLE SERVICE"""
     op.drop_column('services', 'card_id')
 
-    ### TABLE CARDS ###
+    """TABLE CARDS"""
     op.drop_column('cards', 'card_name')
     op.drop_column('cards', 'card_type')
     op.drop_column('cards', 'main_currency')
 
-    ### TABLE CARD TRANSACTION ###
+    """TABLE CARD TRANSACTION"""
     op.drop_column('card_transactions', 'payout')
     op.drop_column('card_transactions', 'payment')
     op.drop_column('card_transactions', 'rate_to_main_currency')

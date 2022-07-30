@@ -1,8 +1,7 @@
-from management.validation import *
 from management.security.security import Security
+from management.services.common import *
 from data_base.repository.crud_repo import CrudRepo
 from data_base.model.tables import UserDataTable
-from datetime import datetime
 
 
 class Login:
@@ -64,9 +63,12 @@ class Login:
                 'Enter your phone: ',
                 'Entered number should contain between 9 and 11 characters. Try again: ',
                 (9, 11))
-            CrudRepo(engine, UserDataTable).add(name=name, surname=surname, country=country,
-                                                address=address, email=email, phone=phone,
-                                                login=login, password=password, creation_date=datetime.now())
+            main_currency = choose_currency("Choose the main currency for your account: ")
+            CrudRepo(engine, UserDataTable).add(
+                name=name, surname=surname, country=country,
+                address=address, email=email, phone=phone,
+                login=login, password=password, creation_date=datetime.now(),
+                main_currency=main_currency)
             print(f'{" " * 12}Your account has been created')
         else:
             raise SystemExit(0)
