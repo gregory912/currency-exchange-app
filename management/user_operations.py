@@ -4,14 +4,16 @@ from management.services.currency_exchange_service import CurrencyExchangeServic
 from management.services.transactions_service import TransactionService
 from management.services.card_transactions_service import CardTransactionsService
 from management.services.card_management_service import CardManagementService
+from management.services.data_saving_service import SavingService
 from management.validation import get_answer, validation_chosen_operation
 from management.conversions import user_account_named_tuple, used_card_named_tuple, user_data_named_tuple
+from management.services.common import get_dates
 from data_base.repository.crud_repo import CrudRepo
 from data_base.model.tables import UserAccountTable, CardTable
 from sqlalchemy import create_engine
 
 
-class BussinesLogic:
+class UserOperations:
     def __init__(self):
         self.username = 'user'  #wprowadzic dane z pliku yml?
         self.password = 'user1234'
@@ -33,6 +35,7 @@ class BussinesLogic:
                 print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
 
     def _get_last_used_card(self, print_card: bool = True):
+        CardManagementService.card_expired(self.engine, self._used_card, self._logged_in_user)
         last_used = CardManagementService.check_service(self.engine, self._logged_in_user)
         if last_used[0][0]:
             self._used_card = used_card_named_tuple(CrudRepo(self.engine, CardTable).find_by_id_choose_columns(
@@ -86,14 +89,13 @@ class BussinesLogic:
             6. Show the account details
             7. Show last transactions
             8. Generate an account statement
-            9. Remove the account
-           10. Go back
+            9. Go back
             """)
         chosen_operation = get_answer(
             validation_chosen_operation,
             'Enter chosen operation: ',
             'Entered data contains illegal characters. Try again: ',
-            (1, 10))
+            (1, 9))
         match chosen_operation:
             case '1':
                 if self._used_account:
@@ -142,10 +144,14 @@ class BussinesLogic:
                     print(f"\n{' ' * 12}You cannot see last transactions because you don't have any account. "
                           f"Open a foreign currency account.")
             case '8':
-                pass
+                if self._used_account:
+                    dates = get_dates()
+                    data = TransactionService().transactions_between_dates(self.engine, self._used_account, dates)
+                    SavingService().generate_statement(data, self._logged_in_user, self._used_account, dates)
+                else:
+                    print(f"\n{' ' * 12}You cannot generate a statement because you don't have any account. "
+                          f"Open a foreign currency account.")
             case '9':
-                pass
-            case '10':
                 self._choose_operation()
 
     def _card_operations(self):
@@ -185,7 +191,7 @@ class BussinesLogic:
                     print(f"\n{' ' * 12}You cannot pay by card. "
                           f"Open a card for currency transactions to be able to perform operations.")
             case '3':
-                if CardManagementService.add_card_type(self.engine, self._logged_in_user.id):
+                if CardManagementService.add_card_type(self.engine, self._logged_in_user):
                     CardManagementService.update_service_after_adding_card(self.engine, self._logged_in_user.id)
             case '4':
                 if self._used_card:
@@ -222,7 +228,10 @@ class BussinesLogic:
                 else:
                     print(f"\n{' ' * 12}You don't have any card.")
             case '10':
-                pass
+                if self._used_card:
+                    CardManagementService.card_security(self.engine, self._used_card)
+                else:
+                    print(f"\n{' ' * 12}You don't have any card.")
             case '11':
                 if self._used_card:
                     CardManagementService.delete_card(self.engine, self._used_card, self._logged_in_user)
@@ -244,4 +253,5 @@ class BussinesLogic:
             case 10:
                 self._account_operations()
             case 15:
+                self._get_last_used_card(False)
                 self._card_operations()

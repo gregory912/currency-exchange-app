@@ -73,6 +73,35 @@ def choose_currency(text: str) -> str:
             return 'EUR'
 
 
+def choose_security(used_card: namedtuple, last_letter: int, operation_range: int) -> str:
+    """Select the currency for which you want to perform the operation"""
+    text = """
+        Select the security you want to change: 
+        1. Online transactions
+        2. Location
+        3. Contactless transactions
+        4. Magnetic stripe transactions
+        5. ATM transactions
+        """
+    print(text[:last_letter]) if used_card.card_type != "STANDARD" else print(text)
+    chosen_operation = get_answer(
+        validation_chosen_operation,
+        'Enter chosen currency: ',
+        'Entered data contains illegal characters. Try again: ',
+        (1, operation_range))
+    match chosen_operation:
+        case '1':
+            return 'Online transactions'
+        case '2':
+            return 'Location'
+        case '3':
+            return 'Contactless transactions'
+        case '4':
+            return 'Magnetic stripe transactions'
+        case '5':
+            return 'ATM transactions'
+
+
 def choose_limit_card(used_card: namedtuple, last_letter: int, operation_range: int) -> str:
     """Select the type of transaction you want to perform"""
     text = """
@@ -100,11 +129,11 @@ def get_dates() -> namedtuple:
     """Enter and validate dates for which you want to find transactions"""
     start_date = datetime.fromisoformat(get_answer(
         validation_datetime,
-        'Enter the start date: ',
+        'Enter the start date in format 2000-12-31: ',
         'Entered date doesn"t exist. Enter the date in this format -  2000-12-31'))
     end_date = datetime.fromisoformat(get_answer(
         validation_datetime,
-        'Enter the end date: ',
+        'Enter the end date in format 2000-12-31: ',
         'Entered date doesn"t exist. Enter the date in this format -  2000-12-31'))
     return dates_named_tuple((start_date, end_date))
 

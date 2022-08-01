@@ -14,27 +14,25 @@ class TransactionService:
         self._print_transactions(
             filtered_transactions[:len(sorted_transactions) if len(sorted_transactions) < 5 else 5], logged_in_user)
 
-    def transactions_between_dates(self, engine, used_account: namedtuple) -> list[namedtuple]:
+    def transactions_between_dates(self, engine, used_account: namedtuple, dates: namedtuple) -> list[namedtuple]:
         """Return all transactions for the account"""
-        sorted_transactions = self._sort_transactions(self._get_transactions_btwn_dates(engine, used_account))
+        sorted_transactions = self._sort_transactions(self._get_transactions_btwn_dates(engine, used_account, dates))
         return self._filter_transactions(engine, sorted_transactions, used_account)
 
     @staticmethod
     def _print_transactions(transactions: list[namedtuple], logged_in_user: namedtuple) -> None:
         """Print transactions based on Transaction namedtuple"""
-
         def space(text: str, elements: int) -> str:
             return ' ' * (elements - len(text)) if text else ' ' * elements
-
         for x in transactions:
             print(f"Data: {x.date} Customer: {x.customer}{space(x.customer, 16)} "
-                  f"Acc number: {x.acc_number}{space(x.acc_number, 21)} "
-                  f"Card nb: {x.card_nb}{space(x.card_nb, 16)} "
+                  f"Acc number: {x.acc_number}{space(x.acc_number, 22)} "
+                  f"Card nb: {x.card_nb}{space(x.card_nb, 18)} "
                   f"Payout: {x.payout}{space(str(x.payout), 7)} "
                   f"Payment: {x.payment}{space(str(x.payment), 7)} "
                   f"Rate: {x.rate}{space(str(x.rate), 4)} "
                   f"Saldo: {x.saldo}{space(str(x.saldo), 7)} "
-                  f"Commission in {logged_in_user.main_currency}: {x.commission}")
+                  f"Fee in {logged_in_user.main_currency}: {x.commission}")
 
     @staticmethod
     def _get_all_transactions(engine, used_account: namedtuple) -> tuple:
@@ -50,9 +48,9 @@ class TransactionService:
         return cur_exch_out, cur_exch_in, transactions, card_transactions
 
     @staticmethod
-    def _get_transactions_btwn_dates(engine, used_account: namedtuple) -> tuple:
+    def _get_transactions_btwn_dates(engine, used_account: namedtuple, dates: namedtuple) -> tuple:
         """The function returns all transactions for a given account and dates"""
-        dates = get_dates()
+
         cur_exch_out = UserAccountRepo(engine, CurrencyExchangeTable).find_btwn_dates(
             (CurrencyExchangeTable.transaction_time,
              dates.start_date,

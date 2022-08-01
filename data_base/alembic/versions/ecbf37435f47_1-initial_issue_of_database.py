@@ -43,7 +43,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('id_user_data', sa.Integer, nullable=False, unique=True),
         sa.Column('user_account_id', sa.Integer, nullable=False, unique=True),
-        sa.ForeignKeyConstraint(['id_user_data'], ['user_data.id'])
+        sa.ForeignKeyConstraint(['logged_in_user'], ['user_data.id'])
     )
 
     op.create_table(
@@ -63,7 +63,7 @@ def upgrade() -> None:
         sa.Column('sec_magnetic_strip', sa.Boolean, default=False),
         sa.Column('sec_withdrawals_atm', sa.Boolean, default=True),
         sa.Column('sec_contactless', sa.Boolean, default=True),
-        sa.ForeignKeyConstraint(['id_user_data'], ['user_data.id'])
+        sa.ForeignKeyConstraint(['logged_in_user'], ['user_data.id'])
     )
 
     op.create_table(
@@ -73,7 +73,7 @@ def upgrade() -> None:
         sa.Column('account_number', sa.String(26), nullable=False, unique=True),
         sa.Column('currency', sa.String(3), nullable=False),
         sa.Column('balance', sa.Numeric(precision=8, scale=2), default=0),
-        sa.ForeignKeyConstraint(['id_user_data'], ['user_data.id'])
+        sa.ForeignKeyConstraint(['logged_in_user'], ['user_data.id'])
     )
 
     op.create_table(

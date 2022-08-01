@@ -6,7 +6,7 @@ from management.services.currency_exchange_service import CurrencyExchange
 from management.services.card_management_service import CardManagementService
 from management.services.common import *
 from management.conversions import *
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 
@@ -223,7 +223,7 @@ class CardTransactionsService:
             (
                 CardTransactionTable.transaction_time,
                 today_date,
-                date(today_date.year, today_date.month, today_date.day + 1),
+                date.today() + timedelta(days=1),
                 CardTransactionTable.id_user_account,
                 used_account.id
             )
