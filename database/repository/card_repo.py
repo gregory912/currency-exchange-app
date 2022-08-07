@@ -1,7 +1,7 @@
 from database.repository.crud_repo import CrudRepo
 from database.model.tables import CardTable, CardTransactionTable
 from sqlalchemy import select, and_, between
-from database.repository.common import *
+from datetime import date
 
 
 class CardRepo(CrudRepo):
@@ -24,7 +24,7 @@ class CardRepo(CrudRepo):
                 self._entity_type.main_currency).where(CardTable.id_user_data == id_user_data))
             return [item for item in result]
 
-    def get_monthly_card_trans_for_user(self, logged_in_user: int) -> list[tuple]:
+    def get_monthly_card_trans_for_user(self, logged_in_user: int, fst_day: date, last_day: date) -> list[tuple]:
         """Get all card transactions for a given user"""
         with self._engine.begin() as conn:
             result = conn.execute(
@@ -33,7 +33,7 @@ class CardRepo(CrudRepo):
                 where(
                     and_(
                         between(
-                            CardTransactionTable.transaction_time, fst_day_of_this_month(), fst_day_of_next_month())),
+                            CardTransactionTable.transaction_time, fst_day, last_day)),
                     and_((logged_in_user == CardTable.id_user_data),
                          CardTransactionTable.transaction_type == "Withdrawals ATM")))
             return [item for item in result]

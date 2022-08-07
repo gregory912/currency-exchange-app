@@ -19,17 +19,25 @@ class CrudRepo:
         """Create a new session"""
         return sessionmaker(self._engine, future=True)
 
-    def add(self, **kwargs):
+    def add(self, **kwargs) -> int:
         """Add one row to the indicated database"""
         with self._engine.begin() as conn:
             item_to_add = insert(self._entity_type).values(kwargs)
-            conn.execute(item_to_add)
+            result = conn.execute(item_to_add)
+            return result.inserted_primary_key_rows[0][0]
 
     def add_join(self, item):
         """Add one row to the indicated database"""
         Session = self._create_session()
         with Session() as session:
             session.add(item)
+            session.commit()
+
+    def add_join_many(self, items: list):
+        """Add many rows to the indicated database"""
+        Session = self._create_session()
+        with Session() as session:
+            session.add_all(items)
             session.commit()
 
     def update_by_id(self, item_id: int, **kwargs):

@@ -60,6 +60,8 @@ def validation_choose_account(entered_item: str, accounts: dict) -> bool:
 
 def validation_file_name(entered_item: str):
     """Check if enterd filename contains only legal characters"""
+    if not entered_item:
+        return False
     for letter in entered_item:
         if letter in r'/\:*?"<>|':
             return False

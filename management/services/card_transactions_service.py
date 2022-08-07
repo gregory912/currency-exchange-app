@@ -202,7 +202,8 @@ class CardTransactionsService:
         def check_commisions_based_on_monthly_transactions(amount: Decimal) -> tuple:
             """Check if a commission is required.
             The amount and commission are stated in the user's primary currency."""
-            all_exchanges = CardRepo(engine, CardTable).get_monthly_card_trans_for_user(logged_in_user.id)
+            all_exchanges = CardRepo(engine, CardTable).get_monthly_card_trans_for_user(
+                logged_in_user.id, fst_day_of_this_month(), fst_day_of_next_month())
             transaction_sum = [(item[0] if item[0] else 0) for item in all_exchanges]
             if sum(transaction_sum) + amount > 200 or len(transaction_sum) > 5:
                 return amount + (amount * Decimal(0.02)), amount * Decimal(0.02)

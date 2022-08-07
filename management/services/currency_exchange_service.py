@@ -1,5 +1,6 @@
 from management.validation import get_answer, validation_chosen_operation, validation_decimal
 from management.conversions import user_account_named_tuple, namedtuple
+from management.services.common import *
 from database.model.tables import UserAccountTable, CurrencyExchangeTable, UserDataTable
 from database.repository.crud_repo import CrudRepo
 from database.repository.user_account_repo import UserAccountRepo
@@ -102,7 +103,8 @@ class CurrencyExchangeService:
     @staticmethod
     def _check_commision(engine, amount: Decimal, id_user_data: int, currency: str) -> tuple:
         """Check if a commission is required. The amount and commission are stated in the user's primary currency."""
-        all_exchanges = UserAccountRepo(engine, UserDataTable).get_monthly_exchanges_for_user(id_user_data)
+        all_exchanges = UserAccountRepo(engine, UserDataTable).get_monthly_exchanges_for_user(
+            id_user_data, fst_day_of_this_month(), fst_day_of_next_month())
         transaction_sum = sum([item[2] for item in all_exchanges])
         if transaction_sum + amount > 1000:
             print(f"\n{' ' * 12}You have exceeded the monthly exchange limit of 1000 {currency}. "

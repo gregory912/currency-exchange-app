@@ -2,6 +2,7 @@ from management.conversions import dates_named_tuple
 from management.validation import *
 from collections import namedtuple
 from random import randint
+from datetime import date, timedelta
 
 
 def choose_payment_type() -> str:
@@ -141,3 +142,19 @@ def get_dates() -> namedtuple:
 def generate_random_number(range_min: int, range_max: int) -> str:
     """Generate a random number that can be used to simulate some number"""
     return ''.join([str(randint(0, 9)) for _ in range(range_min, range_max)])
+
+
+def fst_day_of_this_month() -> date:
+    """Return the date for the first day of entered month"""
+    today_date = date.today()
+    return date(today_date.year, today_date.month, 1)
+
+
+def fst_day_of_next_month() -> date:
+    """Based on the current date, return the date for the first day of the next month"""
+    date_ = date.today()
+    month = date_.month
+    while month == date_.month:
+        date_ = date_ + timedelta(days=1)
+        if month != date_.month:
+            return date_

@@ -20,7 +20,8 @@ class UserDataTable(base):
 
     services_to_user_data = relationship("ServiceTable", back_populates="user_data_to_services", uselist=False)
     cards_to_user_data = relationship("CardTable", back_populates="user_data_to_cards", uselist=False) #jak nie ma use list to nie da sie zrobic add_join
-    user_accounts_to_user_data = relationship("UserAccountTable", back_populates="user_data_to_user_accounts")
+    user_accounts_to_user_data = relationship(
+        "UserAccountTable", back_populates="user_data_to_user_accounts", uselist=False)
 
 
 class ServiceTable(base):
