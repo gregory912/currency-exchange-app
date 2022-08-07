@@ -19,7 +19,7 @@ class UserDataTable(base):
     main_currency = Column(String(3), nullable=False)
 
     services_to_user_data = relationship("ServiceTable", back_populates="user_data_to_services", uselist=False)
-    cards_to_user_data = relationship("CardTable", back_populates="user_data_to_cards")
+    cards_to_user_data = relationship("CardTable", back_populates="user_data_to_cards", uselist=False) #jak nie ma use list to nie da sie zrobic add_join
     user_accounts_to_user_data = relationship("UserAccountTable", back_populates="user_data_to_user_accounts")
 
 
@@ -82,7 +82,7 @@ class CardTransactionTable(base):
     commission_in_main_user_currency = Column(Numeric(precision=6, scale=2))
     balance = Column(Numeric(precision=8, scale=2))
     payer_name = Column(String(50), nullable=False)
-    id_card = Column(Integer, ForeignKey('cards.id', ondelete='SET NULL'), nullable=False)
+    id_card = Column(Integer, ForeignKey('cards.id', ondelete='SET NULL'))
     payout = Column(String(3))
     payment = Column(String(3))
     rate_to_main_card_currency = Column(Numeric(precision=3, scale=2), nullable=False)

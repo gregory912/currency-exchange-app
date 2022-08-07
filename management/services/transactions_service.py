@@ -1,9 +1,8 @@
-from management.services.common import get_dates
 from management.conversions import *
-from data_base.model.tables import CurrencyExchangeTable, CardTransactionTable, TransactionTable, UserAccountTable
-from data_base.model.tables import CardTable
-from data_base.repository.crud_repo import CrudRepo
-from data_base.repository.user_account_repo import UserAccountRepo
+from database.model.tables import CurrencyExchangeTable, CardTransactionTable, TransactionTable, UserAccountTable
+from database.model.tables import CardTable
+from database.repository.crud_repo import CrudRepo
+from database.repository.user_account_repo import UserAccountRepo
 
 
 class TransactionService:

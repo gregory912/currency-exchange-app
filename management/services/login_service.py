@@ -1,7 +1,7 @@
 from management.security.security import Security
 from management.services.common import *
-from data_base.repository.crud_repo import CrudRepo
-from data_base.model.tables import UserDataTable
+from database.repository.crud_repo import CrudRepo
+from database.model.tables import UserDataTable
 
 
 class Login:

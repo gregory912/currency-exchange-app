@@ -8,8 +8,8 @@ from management.services.data_saving_service import SavingService
 from management.validation import get_answer, validation_chosen_operation
 from management.conversions import user_account_named_tuple, used_card_named_tuple, user_data_named_tuple
 from management.services.common import get_dates
-from data_base.repository.crud_repo import CrudRepo
-from data_base.model.tables import UserAccountTable, CardTable
+from database.repository.crud_repo import CrudRepo
+from database.model.tables import UserAccountTable, CardTable
 from sqlalchemy import create_engine
 
 

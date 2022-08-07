@@ -1,6 +1,6 @@
-from data_base.repository.crud_repo import CrudRepo
-from data_base.repository.card_repo import CardRepo
-from data_base.model.tables import *
+from database.repository.crud_repo import CrudRepo
+from database.repository.card_repo import CardRepo
+from database.model.tables import *
 from management.conversions import used_card_named_tuple, card_named_tuple, user_account_named_tuple
 from management.security.security import Security
 from management.services.common import *

@@ -1,7 +1,7 @@
-from data_base.repository.crud_repo import CrudRepo
-from data_base.model.tables import CardTable, CardTransactionTable
+from database.repository.crud_repo import CrudRepo
+from database.model.tables import CardTable, CardTransactionTable
 from sqlalchemy import select, and_, between
-from data_base.repository.common import *
+from database.repository.common import *
 
 
 class CardRepo(CrudRepo):

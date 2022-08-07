@@ -1,7 +1,7 @@
-from data_base.repository.crud_repo import CrudRepo
+from database.repository.crud_repo import CrudRepo
 from sqlalchemy import select, and_, between
-from data_base.model.tables import CurrencyExchangeTable, UserAccountTable
-from data_base.repository.common import *
+from database.model.tables import CurrencyExchangeTable, UserAccountTable
+from database.repository.common import *
 
 
 class UserAccountRepo(CrudRepo):

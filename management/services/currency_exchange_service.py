@@ -1,8 +1,8 @@
 from management.validation import get_answer, validation_chosen_operation, validation_decimal
 from management.conversions import user_account_named_tuple, namedtuple
-from data_base.model.tables import UserAccountTable, CurrencyExchangeTable, UserDataTable
-from data_base.repository.crud_repo import CrudRepo
-from data_base.repository.user_account_repo import UserAccountRepo
+from database.model.tables import UserAccountTable, CurrencyExchangeTable, UserDataTable
+from database.repository.crud_repo import CrudRepo
+from database.repository.user_account_repo import UserAccountRepo
 from datetime import datetime
 from requests import request
 from json import loads
