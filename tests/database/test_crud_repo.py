@@ -61,10 +61,9 @@ class MyTestCase(unittest.TestCase):
         it with the randomly selected account number."""
         account_number = draw_numbers(26)
         data = get_user_account(1, account_number, 800.00)
-        self.user_account_crud_repo.add(**data)
-        user_account = self.user_account_crud_repo.get_last_row()
+        user_account = self.user_account_crud_repo.add(**data)
         user_account_only_column = self.user_account_crud_repo.find_by_id_choose_columns(
-            user_account[0],
+            user_account,
             (UserAccountTable.account_number, ))
         self.assertEqual(account_number, user_account_only_column[0],
                          'Method test_add_and_get_last_row_and_find_by_id_choose_columns return wrong values')
@@ -73,9 +72,8 @@ class MyTestCase(unittest.TestCase):
         """Enter a row in the database, then use this function find_all_by_id
          to retrieve items from the database and check if the items are the same"""
         data = get_user_account(1, draw_numbers(26), 800.00)
-        self.user_account_crud_repo.add(**data)
-        user_account = self.user_account_crud_repo.get_last_row()
-        user_account_from_db = self.user_account_crud_repo.find_all_by_id([user_account[0]])
+        user_account = self.user_account_crud_repo.add(**data)
+        user_account_from_db = self.user_account_crud_repo.find_all_by_id([user_account])
         self.assertEqual(dict_to_tuple(data), user_account_from_db[0][1:],
                          'Method test_add_and_get_last_row_and_find_all_by_id return wrong values')
 
