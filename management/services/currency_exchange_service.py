@@ -1,4 +1,5 @@
-from management.conversions import user_account_named_tuple
+from management.validation import get_answer, validation_chosen_operation, validation_decimal
+from management.conversions import user_account_named_tuple, namedtuple
 from management.services.common import *
 from database.model.tables import UserAccountTable, CurrencyExchangeTable, UserDataTable
 from database.repository.crud_repo import CrudRepo
@@ -22,11 +23,9 @@ class CurrencyExchangeService:
         if not accounts:
             print(f"\n{' ' * 12}You don't have any account other than your main account. "
                   f"Create a new account to be able to exchange currencies")
-            return False
         else:
             if used_account.balance == 0:
                 print(f"\n{' ' * 12}You do not have enough funds on your account to perform this operation.")
-                return False
             else:
                 chosen_operation = get_answer(
                     validation_chosen_operation,
@@ -39,7 +38,6 @@ class CurrencyExchangeService:
                     'Entered data contains illegal characters. Try again: '))
                 if amount > used_account.balance:
                     print(f"\n{' ' * 12}You do not have enough funds on your account to perform this operation.")
-                    return False
                 else:
                     transaction_account = accounts[int(chosen_operation) - 1]
                     if logged_in_user.main_currency != used_account.currency:
@@ -47,7 +45,7 @@ class CurrencyExchangeService:
                             used_account.currency, logged_in_user.main_currency, str(amount))['result'])
                     else:
                         amount_in_main_user_currency = amount
-                    amt_after_checking, commission_after_checking = CurrencyExchangeService._check_commission(
+                    amt_after_checking, commission_after_checking = CurrencyExchangeService._check_commision(
                         engine, amount_in_main_user_currency, logged_in_user.id, logged_in_user.main_currency)
                     exchanged_amount = self.cur_exch_obj.get_result(
                         logged_in_user.main_currency, transaction_account.currency, str(amt_after_checking))['result']
@@ -77,7 +75,7 @@ class CurrencyExchangeService:
                         account_number=transaction_account.account_number,
                         currency=transaction_account.currency,
                         balance=exch_cur_in['balance'])
-                    lastrow = CrudRepo(engine, CurrencyExchangeTable).add(
+                    CrudRepo(engine, CurrencyExchangeTable).add(
                         id_user_account_out=used_account.id,
                         transfer_amount_out=exch_cur_out['amount'],
                         exchange_rate_out=exch_cur_out['rate'],
@@ -91,7 +89,6 @@ class CurrencyExchangeService:
                         commission_in_main_user_currency=commission_after_checking
                     )
                     print(f"\n{' ' * 12}The transaction was successful.")
-                    return lastrow
 
     @staticmethod
     def _available_accounts(engine, id_user_data: int, used_account: namedtuple) -> list:
@@ -104,7 +101,7 @@ class CurrencyExchangeService:
         return accounts_named_tuple
 
     @staticmethod
-    def _check_commission(engine, amount: Decimal, id_user_data: int, currency: str) -> tuple:
+    def _check_commision(engine, amount: Decimal, id_user_data: int, currency: str) -> tuple:
         """Check if a commission is required. The amount and commission are stated in the user's primary currency."""
         all_exchanges = UserAccountRepo(engine, UserDataTable).get_monthly_exchanges_for_user(
             id_user_data, fst_day_of_this_month(), fst_day_of_next_month())
