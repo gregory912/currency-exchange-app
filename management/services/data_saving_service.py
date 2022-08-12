@@ -33,10 +33,10 @@ class SavingService:
                 'Entered data contains illegal characters. Try again')
             match chosen_operation:
                 case '1':
-                    file_path = SavingService.create_path(file_path, file_name, "xlsx")
-                    SavingService._save_data_to_xlsx(data, logged_in_user, file_path)
+                    file_path = self.create_path(file_path, file_name, "xlsx")
+                    self._save_data_to_xlsx(data, logged_in_user, file_path)
                 case '2':
-                    file_path = SavingService.create_path(file_path, file_name, "pdf")
+                    file_path = self.create_path(file_path, file_name, "pdf")
                     self._serialize_to_pdf(file_path, used_account, logged_in_user, data, dates)
         else:
             print(f"\n{' ' * 12}You don't have any history for the selected time period.")

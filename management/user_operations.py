@@ -1,4 +1,4 @@
-from management.services.login_service import Login
+from management.services.login_service import LoginService
 from management.services.account_service import AccountService
 from management.services.currency_exchange_service import CurrencyExchangeService
 from management.services.transactions_service import TransactionService
@@ -15,30 +15,44 @@ from sqlalchemy import create_engine
 
 class UserOperations:
     def __init__(self):
-        self.username = 'user'  #wprowadzic dane z pliku yml?
+        self.username = 'user'
         self.password = 'user1234'
         self.database = 'currency_exchange_app'
         self.port = 3309
         self.url = f'mysql://{self.username}:{self.password}@localhost:{self.port}/{self.database}'
-        self.engine = create_engine(self.url, future=True)  #echo=True,
+        self.engine = create_engine(self.url, future=True)
         self._logged_in_user = None
         self._used_account = None
         self._used_card = None
         self._sequence = 0
 
+        self.account_service_obj = AccountService(self.engine)
+        self.card_mgmt_service_obj = CardManagementService(self.engine)
+        self.card_trans_service_obj = CardTransactionsService(self.engine)
+        self.currency_exch_service_obj = CurrencyExchangeService(self.engine)
+        self.login_service_obj = LoginService(self.engine)
+        self.transaction_service_obj = TransactionService(self.engine)
+
+        self.user_account_crud_repo = CrudRepo(self.engine, UserAccountTable)
+        self.card_crud_repo = CrudRepo(self.engine, CardTable)
+
     def _get_last_used_account(self, print_account: bool = True):
-        last_used = AccountService.check_service(self.engine, self._logged_in_user)
+        """Check the last used account.
+        Assign to a variable for display at the top in the main application window"""
+        last_used = self.account_service_obj.check_service(self._logged_in_user)
         if last_used:
             self._used_account = user_account_named_tuple(
-                CrudRepo(self.engine, UserAccountTable).find_by_id(last_used[0][0]))
+                self.user_account_crud_repo.find_by_id(last_used[0][0]))
             if print_account:
                 print(f'\n{" " * 12}{self._used_account.currency} {self._used_account.balance}')
 
     def _get_last_used_card(self, print_card: bool = True):
-        CardManagementService.card_expired(self.engine, self._used_card, self._logged_in_user)
-        last_used = CardManagementService.check_service(self.engine, self._logged_in_user)
+        """Check the last used account.
+        Assign to a variable for display at the top in the main application window"""
+        self.card_mgmt_service_obj.card_expired(self._used_card, self._logged_in_user)
+        last_used = self.card_mgmt_service_obj.check_service(self._logged_in_user)
         if last_used[0][0]:
-            self._used_card = used_card_named_tuple(CrudRepo(self.engine, CardTable).find_by_id_choose_columns(
+            self._used_card = used_card_named_tuple(self.card_crud_repo.find_by_id_choose_columns(
                 last_used[0][0],
                 (CardTable.id, CardTable.card_number, CardTable.valid_thru,
                  CardTable.card_name, CardTable.card_type, CardTable.main_currency)))
@@ -49,6 +63,8 @@ class UserOperations:
             self._used_card = None
 
     def _choose_operation(self):
+        """Choose whether you want to make transactions using
+        a foreign currency account or transactions using a card."""
         print("""
             Select an operation: 
             1. Operations for accounts
@@ -62,22 +78,23 @@ class UserOperations:
             (1, 3))
         match chosen_operation:
             case '1':
-                if not AccountService.check_service(self.engine, self._logged_in_user):
-                    AccountService.user_without_account(self.engine, self._logged_in_user)
+                if not self.account_service_obj.check_service(self._logged_in_user):
+                    self.account_service_obj.user_without_account(self._logged_in_user)
                 self._sequence = 10
             case '2':
-                if AccountService.check_service(self.engine, self._logged_in_user):
-                    if not CardManagementService.check_service(self.engine, self._logged_in_user)[0][0]:
-                        CardManagementService.user_without_card(self.engine, self._logged_in_user)
+                if self.account_service_obj.check_service(self._logged_in_user):
+                    if not self.card_mgmt_service_obj.check_service(self._logged_in_user)[0][0]:
+                        self.card_mgmt_service_obj.user_without_card(self._logged_in_user)
                         self._sequence = 15
                     else:
                         self._sequence = 15
                 else:
-                    AccountService.user_without_account(self.engine, self._logged_in_user)
+                    self.account_service_obj.user_without_account(self._logged_in_user)
             case '3':
                 raise SystemExit(0)
 
     def _account_operations(self):
+        """Select operations for your account from the console"""
         self._get_last_used_account()
         print("""
             Select operation for your account: 
@@ -99,34 +116,34 @@ class UserOperations:
         match chosen_operation:
             case '1':
                 if self._used_account:
-                    AccountService.switch_accounts(self.engine, self._logged_in_user.id)
+                    self.account_service_obj.switch_accounts(self._logged_in_user.id)
                 else:
                     print(f"\n{' ' * 12}You cannot switch account because you don't have any account. "
                           f"Open a foreign currency account.")
             case '2':
                 if not self._used_account:
-                    AccountService.add_account(self.engine, self._logged_in_user.id)
-                    AccountService.add_service(self.engine, self._logged_in_user.id)
+                    self.account_service_obj.add_account(self._logged_in_user.id)
+                    self.account_service_obj.add_service(self._logged_in_user.id)
                 else:
-                    if AccountService.add_account(self.engine, self._logged_in_user.id):
+                    if self.account_service_obj.add_account(self._logged_in_user.id):
                         print(f"\n{' ' * 12}Account has not been created. An account for this currency already exists.")
                     else:
-                        AccountService.update_service(self.engine, self._logged_in_user.id)
+                        self.account_service_obj.update_service(self._logged_in_user.id)
             case '3':
                 if self._used_account:
-                    CurrencyExchangeService().transaction(self.engine, self._logged_in_user, self._used_account)
+                    self.currency_exch_service_obj.transaction(self._logged_in_user, self._used_account)
                 else:
                     print(f"\n{' ' * 12}You cannot make transactions because you don't have any account. "
                           f"Open a foreign currency account.")
             case '4':
                 if self._used_account:
-                    AccountService.add_money(self.engine, self._used_account)
+                    self.account_service_obj.add_money(self._used_account)
                 else:
                     print(f"\n{' ' * 12}You cannot add money because you don't have any account. "
                           f"Open a foreign currency account.")
             case '5':
                 if self._used_account:
-                    AccountService.transfer_money(self.engine, self._used_account)
+                    self.account_service_obj.transfer_money(self._used_account)
                 else:
                     print(f"\n{' ' * 12}You cannot transfer money because you don't have any account. "
                           f"Open a foreign currency account.")
@@ -139,14 +156,14 @@ class UserOperations:
                           f"Open a foreign currency account.")
             case '7':
                 if self._used_account:
-                    TransactionService().last_transactions(self.engine, self._used_account, self._logged_in_user)
+                    self.transaction_service_obj.last_transactions(self._used_account, self._logged_in_user)
                 else:
                     print(f"\n{' ' * 12}You cannot see last transactions because you don't have any account. "
                           f"Open a foreign currency account.")
             case '8':
                 if self._used_account:
                     dates = get_dates()
-                    data = TransactionService().transactions_between_dates(self.engine, self._used_account, dates)
+                    data = self.transaction_service_obj.transactions_between_dates(self._used_account, dates)
                     SavingService().generate_statement(data, self._logged_in_user, self._used_account, dates)
                 else:
                     print(f"\n{' ' * 12}You cannot generate a statement because you don't have any account. "
@@ -155,6 +172,7 @@ class UserOperations:
                 self._choose_operation()
 
     def _card_operations(self):
+        """Select operations for your card from the console"""
         self._get_last_used_account(False)
         self._get_last_used_card()
         print("""
@@ -180,28 +198,28 @@ class UserOperations:
         match chosen_operation:
             case '1':
                 if self._used_card:
-                    CardManagementService.switch_cards(self.engine, self._logged_in_user.id)
+                    self.card_mgmt_service_obj.switch_cards(self._logged_in_user.id)
                 else:
                     print(f"\n{' ' * 12}You cannot switch cards. "
                           f"Open a card for currency transactions to be able to perform operations.")
             case '2':
                 if self._used_card:
-                    CardTransactionsService.pay_by_card(self.engine, self._used_card, self._logged_in_user)
+                    self.card_trans_service_obj.pay_by_card(self._used_card, self._logged_in_user)
                 else:
                     print(f"\n{' ' * 12}You cannot pay by card. "
                           f"Open a card for currency transactions to be able to perform operations.")
             case '3':
-                if CardManagementService.add_card_type(self.engine, self._logged_in_user):
-                    CardManagementService.update_service_after_adding_card(self.engine, self._logged_in_user.id)
+                if self.card_mgmt_service_obj.add_card_type(self._logged_in_user):
+                    self.card_mgmt_service_obj.update_service_after_adding_card(self._logged_in_user.id)
             case '4':
                 if self._used_card:
-                    CardTransactionsService.withdraw_money(self.engine, self._used_card, self._logged_in_user)
+                    self.card_trans_service_obj.withdraw_money(self._used_card, self._logged_in_user)
                 else:
                     print(f"\n{' ' * 12}You cannot withdraw the money. "
                           f"Open a card for currency transactions to be able to perform operations.")
             case '5':
                 if self._used_card:
-                    CardTransactionsService.deposit_money(self.engine, self._used_card, self._logged_in_user)
+                    self.card_trans_service_obj.deposit_money(self._used_card, self._logged_in_user)
                 else:
                     print(f"\n{' ' * 12}You cannot withdraw the money. "
                           f"Open a card for currency transactions to be able to perform operations.")
@@ -214,27 +232,27 @@ class UserOperations:
                     print(f"\n{' ' * 12}You don't have any card. Get a card to see the details.")
             case '7':
                 if self._used_card:
-                    CardManagementService.block_card(self.engine, self._used_card)
+                    self.card_mgmt_service_obj.block_card(self._used_card)
                 else:
                     print(f"\n{' ' * 12}You don't have any card.")
             case '8':
                 if self._used_card:
-                    CardManagementService.set_card_limit(self.engine, self._used_card)
+                    self.card_mgmt_service_obj.set_card_limit(self._used_card)
                 else:
                     print(f"\n{' ' * 12}You don't have any card.")
             case '9':
                 if self._used_card:
-                    CardManagementService.show_pin(self.engine, self._used_card, self._logged_in_user)
+                    self.card_mgmt_service_obj.show_pin(self._used_card, self._logged_in_user)
                 else:
                     print(f"\n{' ' * 12}You don't have any card.")
             case '10':
                 if self._used_card:
-                    CardManagementService.card_security(self.engine, self._used_card)
+                    self.card_mgmt_service_obj.card_security(self._used_card)
                 else:
                     print(f"\n{' ' * 12}You don't have any card.")
             case '11':
                 if self._used_card:
-                    CardManagementService.delete_card(self.engine, self._used_card, self._logged_in_user)
+                    self.card_mgmt_service_obj.delete_card(self._used_card, self._logged_in_user)
                     print(f"\n{' ' * 12}Your card has been removed.")
                 else:
                     print(f"\n{' ' * 12}You don't have any card.")
@@ -242,11 +260,12 @@ class UserOperations:
                 self._choose_operation()
 
     def cycle(self):
+        """The cycle of a program to perform the proper operation"""
         match self._sequence:
             case 0:
-                if not Login.does_account_exist():
-                    Login.create_account(self.engine)
-                self._logged_in_user = user_data_named_tuple(Login.login(self.engine))
+                if not self.login_service_obj.does_account_exist():
+                    self.login_service_obj.create_account()
+                self._logged_in_user = user_data_named_tuple(self.login_service_obj.login())
                 self._sequence = 5
             case 5:
                 self._choose_operation()

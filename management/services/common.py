@@ -158,3 +158,9 @@ def fst_day_of_next_month() -> date:
         date_ = date_ + timedelta(days=1)
         if month != date_.month:
             return date_
+
+
+def get_date_with_first_day_of_month(years: int) -> date:
+    """Create an expiration date for the card. Add the indicated number of years"""
+    today_date = date.today()
+    return date(today_date.year + years, today_date.month, 1)

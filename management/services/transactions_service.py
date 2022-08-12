@@ -6,69 +6,61 @@ from database.repository.user_account_repo import UserAccountRepo
 
 
 class TransactionService:
-    def last_transactions(self, engine, used_account: namedtuple, logged_in_user: namedtuple) -> None:
+    def __init__(self, engine):
+        self.engine = engine
+
+        self.user_account_crud_repo = CrudRepo(self.engine, UserAccountTable)
+        self.currency_exch_crud_repo = UserAccountRepo(self.engine, CurrencyExchangeTable)
+        self.transaction_crud_repo = UserAccountRepo(self.engine, TransactionTable)
+        self.card_transaction_crud_repo = UserAccountRepo(self.engine, CardTransactionTable)
+        self.card_crud_repo = CrudRepo(self.engine, CardTable)
+
+    def last_transactions(self, used_account: namedtuple, logged_in_user: namedtuple) -> None:
         """Get and print last 5 transactions """
-        sorted_transactions = self._sort_transactions(self._get_all_transactions(engine, used_account))
-        filtered_transactions = self._filter_transactions(engine, sorted_transactions, used_account)
+        sorted_transactions = self._sort_transactions(self._get_all_transactions(used_account))
+        filtered_transactions = self._filter_transactions(sorted_transactions, used_account)
         self._print_transactions(
             filtered_transactions[:len(sorted_transactions) if len(sorted_transactions) < 5 else 5], logged_in_user)
 
-    def transactions_between_dates(self, engine, used_account: namedtuple, dates: namedtuple) -> list[namedtuple]:
+    def transactions_between_dates(self, used_account: namedtuple, dates: namedtuple) -> list[namedtuple]:
         """Return all transactions for the account"""
-        sorted_transactions = self._sort_transactions(self._get_transactions_btwn_dates(engine, used_account, dates))
-        return self._filter_transactions(engine, sorted_transactions, used_account)
+        sorted_transactions = self._sort_transactions(self._get_transactions_btwn_dates(used_account, dates))
+        return self._filter_transactions(sorted_transactions, used_account)
 
-    @staticmethod
-    def _print_transactions(transactions: list[namedtuple], logged_in_user: namedtuple) -> None:
-        """Print transactions based on Transaction namedtuple"""
-        def space(text: str, elements: int) -> str:
-            return ' ' * (elements - len(text)) if text else ' ' * elements
-        for x in transactions:
-            print(f"Data: {x.date} Customer: {x.customer}{space(x.customer, 16)} "
-                  f"Acc number: {x.acc_number}{space(x.acc_number, 22)} "
-                  f"Card nb: {x.card_nb}{space(x.card_nb, 18)} "
-                  f"Payout: {x.payout}{space(str(x.payout), 7)} "
-                  f"Payment: {x.payment}{space(str(x.payment), 7)} "
-                  f"Rate: {x.rate}{space(str(x.rate), 4)} "
-                  f"Saldo: {x.saldo}{space(str(x.saldo), 7)} "
-                  f"Fee in {logged_in_user.main_currency}: {x.commission}")
-
-    @staticmethod
-    def _get_all_transactions(engine, used_account: namedtuple) -> tuple:
+    def _get_all_transactions(self, used_account: namedtuple) -> tuple:
         """The function returns all transactions for a given account"""
-        cur_exch_out = CrudRepo(engine, CurrencyExchangeTable).find_all_with_condition(
+        cur_exch_out = self.currency_exch_crud_repo.find_all_with_condition(
             (CurrencyExchangeTable.id_user_account_out, used_account.id))
-        cur_exch_in = CrudRepo(engine, CurrencyExchangeTable).find_all_with_condition(
+        cur_exch_in = self.currency_exch_crud_repo.find_all_with_condition(
             (CurrencyExchangeTable.id_user_account_in, used_account.id))
-        transactions = CrudRepo(engine, TransactionTable).find_all_with_condition(
+        transactions = self.transaction_crud_repo.find_all_with_condition(
             (TransactionTable.id_user_account, used_account.id))
-        card_transactions = CrudRepo(engine, CardTransactionTable).find_all_with_condition(
+        card_transactions = self.card_transaction_crud_repo.find_all_with_condition(
             (CardTransactionTable.id_user_account, used_account.id))
         return cur_exch_out, cur_exch_in, transactions, card_transactions
 
-    @staticmethod
-    def _get_transactions_btwn_dates(engine, used_account: namedtuple, dates: namedtuple) -> tuple:
+    def _get_transactions_btwn_dates(self, used_account: namedtuple, dates: namedtuple) -> tuple:
         """The function returns all transactions for a given account and dates"""
 
-        cur_exch_out = UserAccountRepo(engine, CurrencyExchangeTable).find_btwn_dates(
+        cur_exch_out = self.currency_exch_crud_repo.find_btwn_dates(
             (CurrencyExchangeTable.transaction_time,
              dates.start_date,
              dates.end_date,
              CurrencyExchangeTable.id_user_account_out,
              used_account.id))
-        cur_exch_in = UserAccountRepo(engine, CurrencyExchangeTable).find_btwn_dates(
+        cur_exch_in = self.currency_exch_crud_repo.find_btwn_dates(
             (CurrencyExchangeTable.transaction_time,
              dates.start_date,
              dates.end_date,
              CurrencyExchangeTable.id_user_account_in,
              used_account.id))
-        transactions = UserAccountRepo(engine, TransactionTable).find_btwn_dates(
+        transactions = self.transaction_crud_repo.find_btwn_dates(
             (TransactionTable.transaction_time,
              dates.start_date,
              dates.end_date,
              TransactionTable.id_user_account,
              used_account.id))
-        card_transactions = UserAccountRepo(engine, CardTransactionTable).find_btwn_dates(
+        card_transactions = self.card_transaction_crud_repo.find_btwn_dates(
             (CardTransactionTable.transaction_time,
              dates.start_date,
              dates.end_date,
@@ -76,8 +68,7 @@ class TransactionService:
              used_account.id))
         return cur_exch_out, cur_exch_in, transactions, card_transactions
 
-    @staticmethod
-    def _filter_transactions(engine, transactions: list[namedtuple], used_account: namedtuple) -> list[namedtuple]:
+    def _filter_transactions(self, transactions: list[namedtuple], used_account: namedtuple) -> list[namedtuple]:
         """Filter the results you get from different namedtuple to one general type"""
         filtred_transactions = []
         for transaction in transactions:
@@ -85,7 +76,7 @@ class TransactionService:
                 if used_account.id == transaction.id_user_account_out:
                     filtred_transactions.append(transactions_to_statement_named_tuple((
                         transaction.transaction_time,
-                        f"Exchanged to {CrudRepo(engine, UserAccountTable).find_by_id(transaction.id_user_account_in)[3]}",
+                        f"Exchanged to {self.user_account_crud_repo.find_by_id(transaction.id_user_account_in)[3]}",
                         "",
                         "",
                         transaction.transfer_amount_out,
@@ -132,7 +123,7 @@ class TransactionService:
                         ""
                     )))
             elif type(transaction).__name__ == 'CardTransaction':
-                card_number = CrudRepo(engine, CardTable).find_by_id(transaction.id_card)
+                card_number = self.card_crud_repo.find_by_id(transaction.id_card)
                 if transaction.payout == 'YES':
                     filtred_transactions.append(transactions_to_statement_named_tuple((
                         transaction.transaction_time,
@@ -169,3 +160,21 @@ class TransactionService:
         all_transactions = \
             cur_exch_out_namedtuple + cur_exch_in_namedtuple + transactions_namedtuple + card_transactions_namedtuple
         return sorted(all_transactions, key=lambda x: x.transaction_time, reverse=True)
+
+    @staticmethod
+    def _print_transactions(transactions: list[namedtuple], logged_in_user: namedtuple) -> None:
+        """Print transactions based on Transaction namedtuple"""
+
+        def space(text: str, elements: int) -> str:
+            return ' ' * (elements - len(text)) if text else ' ' * elements
+
+        for x in transactions:
+            print(
+                f"Data: {x.date} Customer: {x.customer}{space(x.customer, 16)} "
+                f"Acc number: {x.acc_number}{space(x.acc_number, 22)} "
+                f"Card nb: {x.card_nb}{space(x.card_nb, 18)} "
+                f"Payout: {x.payout}{space(str(x.payout), 7)} "
+                f"Payment: {x.payment}{space(str(x.payment), 7)} "
+                f"Rate: {x.rate}{space(str(x.rate), 4)} "
+                f"Saldo: {x.saldo}{space(str(x.saldo), 7)} "
+                f"Fee in {logged_in_user.main_currency}: {x.commission}")

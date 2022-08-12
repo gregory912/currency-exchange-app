@@ -1,7 +1,7 @@
 from database.repository.crud_repo import CrudRepo
 from database.repository.card_repo import CardRepo
 from database.model.tables import *
-from management.conversions import used_card_named_tuple, card_named_tuple, user_account_named_tuple
+from management.conversions import used_card_named_tuple, card_named_tuple
 from management.security.security import Security
 from management.services.common import *
 from datetime import date
@@ -9,8 +9,15 @@ from decimal import Decimal
 
 
 class CardManagementService:
-    @staticmethod
-    def user_without_card(engine, logged_in_user: namedtuple):
+    def __init__(self, engine):
+        self.engine = engine
+
+        self.user_account_crud_repo = CrudRepo(self.engine, UserAccountTable)
+        self.user_data_crud_repo = CrudRepo(self.engine, UserDataTable)
+        self.card_crud_repo = CardRepo(self.engine, CardTable)
+        self.service_crud_repo = CrudRepo(self.engine, ServiceTable)
+
+    def user_without_card(self, logged_in_user: namedtuple):
         """Create an account for the new logged_in_user and then update the service"""
         print(f"{' ' * 12}You don't have any card for your account. "
               f"Would you like to open a new account?")
@@ -19,18 +26,17 @@ class CardManagementService:
             "Enter Y or N: ",
             'Entered value is not correct. Enter Y or N: ')
         if response == 'Y':
-            if CardManagementService.add_card_type(engine, logged_in_user):
-                CardManagementService.update_service_after_adding_card(engine, logged_in_user.id)
+            if self.add_card_type(logged_in_user):
+                self.update_service_after_adding_card(logged_in_user.id)
 
-    @staticmethod
-    def add_card_type(engine, logged_in_user: namedtuple) -> bool:
+    def add_card_type(self, logged_in_user: namedtuple) -> bool:
         """Check which card the user wants to add and whether the card can be added"""
         card_name = get_answer(
             validation_space_or_alpha_not_digit,
             'Enter the name of the card: ',
             'Entered data contains illegal characters. Try again: ')
         chosen_currency = choose_currency('Choose the main currency for your card')
-        accounts = CrudRepo(engine, UserAccountTable).find_all_with_condition(
+        accounts = self.user_account_crud_repo.find_all_with_condition(
             (logged_in_user.id, UserAccountTable.id_user_data))
         available_accounts = [item[3] for item in accounts]
         card_type = choose_card_type()
@@ -38,17 +44,17 @@ class CardManagementService:
             print(f"\n{' ' * 12}You cannot add a card for a currency other than your accounts.")
             return False
         if card_type == 'STANDARD':
-            if CardRepo(engine, CardTable).join_cards(
+            if self.card_crud_repo.join_cards(
                     UserDataTable,
                     card_type,
                     logged_in_user.id):
                 print(f"\n{' ' * 12}We cannot add a new card. You cannot have two standard cards on one account.")
                 return False
             else:
-                CardManagementService.add_card(engine, logged_in_user.id, card_type, card_name, chosen_currency)
+                self.add_card(logged_in_user.id, card_type, card_name, chosen_currency)
                 return True
         elif card_type == 'SINGLE-USE VIRTUAL':
-            if CardRepo(engine, CardTable).join_cards(
+            if self.card_crud_repo.join_cards(
                     UserDataTable,
                     card_type,
                     logged_in_user.id):
@@ -56,10 +62,10 @@ class CardManagementService:
                       f"You cannot have two SINGLE-USE VIRTUAL cards on one account.")
                 return False
             else:
-                CardManagementService.add_card(engine, logged_in_user.id, card_type, card_name, chosen_currency)
+                self.add_card(logged_in_user.id, card_type, card_name, chosen_currency)
                 return True
         else:
-            if len(CardRepo(engine, CardTable).join_cards(
+            if len(self.card_crud_repo.join_cards(
                     UserDataTable,
                     card_type,
                     logged_in_user.id)) >= 10:
@@ -67,25 +73,23 @@ class CardManagementService:
                       f"You cannot have more than 10 MULTI-USE VIRTUAL cards on one account.")
                 return False
             else:
-                CardManagementService.add_card(engine, logged_in_user.id, card_type, card_name, chosen_currency)
+                self.add_card(logged_in_user.id, card_type, card_name, chosen_currency)
                 return True
 
-    @staticmethod
-    def update_service_after_adding_card(engine, id_user_data: int):
+    def update_service_after_adding_card(self, id_user_data: int):
         """Update an existing row in the service table"""
-        card_id = CrudRepo(engine, CardTable).get_last_row()[0]
-        service_row = CrudRepo(engine, ServiceTable).find_first_with_condition(
+        card_id = self.card_crud_repo.get_last_row()[0]
+        service_row = self.service_crud_repo.find_first_with_condition(
             (ServiceTable.id_user_data, id_user_data))
-        CrudRepo(engine, ServiceTable).update_by_id(
+        self.service_crud_repo.update_by_id(
             service_row[0],
             id_user_data=id_user_data,
             user_account_id=service_row[2],
             card_id=card_id)
 
-    @staticmethod
-    def switch_cards(engine, id_user_data: int):
+    def switch_cards(self, id_user_data: int):
         """Show all available cards and select the card for which you want to make the transaction"""
-        cards = CardRepo(engine, CardTable).find_all_cards(id_user_data)
+        cards = self.card_crud_repo.find_all_cards(id_user_data)
         cards_named_tuple = [used_card_named_tuple(card) for card in cards]
         for x, item in enumerate(cards_named_tuple):
             print(f"{' ' * 12}", x + 1, ' ', item.card_name, ' ', item.card_type)
@@ -95,24 +99,22 @@ class CardManagementService:
             'Entered data contains illegal characters. Try again: ',
             (1, len(cards_named_tuple)))
         chosen_account = cards_named_tuple[int(chosen_operation) - 1].id
-        service_row = CrudRepo(engine, ServiceTable).find_first_with_condition(
+        service_row = self.service_crud_repo.find_first_with_condition(
             (ServiceTable.id_user_data, id_user_data))
-        CrudRepo(engine, ServiceTable).update_by_id(
+        self.service_crud_repo.update_by_id(
             service_row[0],
             id_user_data=id_user_data,
             user_account_id=service_row[2],
             card_id=chosen_account)
 
-    @staticmethod
-    def check_service(engine, logged_in_user: namedtuple):
+    def check_service(self, logged_in_user: namedtuple):
         """Check if there is a service in the database for the given account"""
-        return CrudRepo(engine, ServiceTable).join_with_condition(
+        return self.service_crud_repo.join_with_condition(
             UserDataTable,
             ServiceTable.card_id,
             (UserDataTable.login, logged_in_user.login))
 
-    @staticmethod
-    def block_card(engine, used_card: namedtuple):
+    def block_card(self, used_card: namedtuple):
         """Lock or unlock a given card"""
         def block_or_unlock(word_1: str, value: bool, word_2):
             print(f"{' ' * 12}Would you like to {word_1} your card?")
@@ -123,9 +125,9 @@ class CardManagementService:
             if response == "Y":
                 card_dict = card._asdict()
                 card_dict["blocked"] = value
-                CrudRepo(engine, CardTable).update_by_id(card.id, **card_dict)
+                self.card_crud_repo.update_by_id(card.id, **card_dict)
                 print(f"{' ' * 12}Your card has been {word_2}.")
-        card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+        card = card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
         if used_card.card_type != "SINGLE-USE VIRTUAL":
             if not card.blocked:
                 block_or_unlock("block", True, "blocked")
@@ -134,8 +136,7 @@ class CardManagementService:
         else:
             print(f"{' ' * 12}You cannot block SINGLE-USE VIRTUAL")
 
-    @staticmethod
-    def set_card_limit(engine, used_card: namedtuple):
+    def set_card_limit(self, used_card: namedtuple):
         """Set limits for the chosen card"""
         def set_limit(limit_type: str, limit: Decimal):
             print(f"{' ' * 12}Your current limit is: {limit}")
@@ -154,13 +155,13 @@ class CardManagementService:
                 else:
                     card_dict = card._asdict()
                     card_dict[limit_type] = Decimal(new_limit)
-                    CrudRepo(engine, CardTable).update_by_id(card.id, **card_dict)
+                    self.card_crud_repo.update_by_id(card.id, **card_dict)
                     print(f"{' ' * 12}Your limit has been updated.")
         if used_card.card_type == "STANDARD":
             chosen_type = choose_limit_card(used_card, 0, 3)
         else:
             chosen_type = choose_limit_card(used_card, 100, 1)
-        card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+        card = card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
         if chosen_type == "Daily limit":
             set_limit("daily_limit", card.daily_limit)
         elif chosen_type == "Internet limit":
@@ -168,8 +169,7 @@ class CardManagementService:
         else:
             set_limit("contactless_limit", card.contactless_limit)
 
-    @staticmethod
-    def card_security(engine, used_card: namedtuple):
+    def card_security(self, used_card: namedtuple):
         """Change the security settings for the card"""
         def set_limit(sec_type: str, security: bool):
             if security:
@@ -189,13 +189,13 @@ class CardManagementService:
                     new_sec = True
                 card_dict = card._asdict()
                 card_dict[sec_type] = new_sec
-                CrudRepo(engine, CardTable).update_by_id(card.id, **card_dict)
+                self.card_crud_repo.update_by_id(card.id, **card_dict)
                 print(f"{' ' * 12}Security settings for your account have been changed.")
         if used_card.card_type == "STANDARD":
             chosen_type = choose_security(used_card, 0, 5)
         else:
             chosen_type = choose_security(used_card, 100, 2)
-        card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+        card = card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
         if chosen_type == "Online transactions":
             set_limit("sec_online_transactions", card.sec_online_transactions)
         elif chosen_type == "Location":
@@ -207,16 +207,15 @@ class CardManagementService:
         elif chosen_type == "ATM transactions":
             set_limit("sec_withdrawals_atm", card.sec_withdrawals_atm)
 
-    @staticmethod
-    def show_pin(engine, used_card: namedtuple, logged_in_user: namedtuple):
+    def show_pin(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Show PIN for a standard card"""
         if used_card.card_type == "STANDARD":
             login = input('Enter your login: ')
             if login == logged_in_user.login:
                 password = input('Enter your password: ')
-                logged_in_user = CrudRepo(engine, UserDataTable).find_first_with_condition((UserDataTable.login, login))
+                logged_in_user = self.user_data_crud_repo.find_first_with_condition((UserDataTable.login, login))
                 if logged_in_user and Security.check_password(password, logged_in_user.password):
-                    card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+                    card = card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
                     print(f"\n{' ' * 12}The pin for your card is: {card.card_pin}")
                 else:
                     print(f"\n{' ' * 12}The entered data is incorrect.")
@@ -225,46 +224,43 @@ class CardManagementService:
         else:
             print(f"\n{' ' * 12}The pin is not required for internet cards.")
 
-    @staticmethod
-    def delete_card(engine, used_card: namedtuple, logged_in_user: namedtuple):
+    def delete_card(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Remove card from the database. Show another card in the service or
         if you do not have any card, block access to card options by setting card_id to None."""
-        CrudRepo(engine, CardTable).delete_by_id(used_card.id)
-        cards = CardRepo(engine, CardTable).find_all_cards(logged_in_user.id)
+        self.card_crud_repo.delete_by_id(used_card.id)
+        cards = self.card_crud_repo.find_all_cards(logged_in_user.id)
         if cards:
             card = [used_card_named_tuple(account) for account in cards][0]
-            service_row = CrudRepo(engine, ServiceTable).find_first_with_condition(
+            service_row = self.service_crud_repo.find_first_with_condition(
                 (ServiceTable.id_user_data, logged_in_user.id))
-            CrudRepo(engine, ServiceTable).update_by_id(
+            self.service_crud_repo.update_by_id(
                 service_row[0],
                 id_user_data=logged_in_user.id,
                 user_account_id=service_row[2],
                 card_id=card.id)
         else:
-            service_row = CrudRepo(engine, ServiceTable).find_first_with_condition(
+            service_row = self.service_crud_repo.find_first_with_condition(
                 (ServiceTable.id_user_data, logged_in_user.id))
-            CrudRepo(engine, ServiceTable).update_by_id(
+            self.service_crud_repo.update_by_id(
                 service_row[0],
                 id_user_data=logged_in_user.id,
                 user_account_id=service_row[2],
                 card_id=None)
 
-    @staticmethod
-    def card_expired(engine, used_card: namedtuple, logged_in_user: namedtuple):
+    def card_expired(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Check if the card is not expired. If so, delete it and display the message"""
         if used_card:
             if used_card.valid_thru < date.today():
-                CardManagementService.delete_card(engine, used_card, logged_in_user)
+                self.delete_card(used_card, logged_in_user)
                 print(f"\n{' ' * 12}The following card has been removed due to expiration. Please add a new card.")
                 print(f"{' ' * 12}Card name: {used_card.card_name} Card type: {used_card.card_type}")
 
-    @staticmethod
-    def add_card(engine, id_user_data: int, card_type: str, card_name: str, main_currency: str):
+    def add_card(self, id_user_data: int, card_type: str, card_name: str, main_currency: str):
         """Add default card settings based on its type"""
-        CrudRepo(engine, CardTable).add(
+        self.card_crud_repo.add(
             id_user_data=id_user_data,
-            card_number=CardManagementService.generate_card_number(engine),
-            valid_thru=CardManagementService.get_date_with_first_day_of_month(3),
+            card_number=self.generate_card_number(),
+            valid_thru=get_date_with_first_day_of_month(3),
             cvv=generate_random_number(0, 3),
             blocked=False if card_type != "SINGLE-USE VIRTUAL" else None,
             daily_limit=Decimal(2000),
@@ -282,16 +278,9 @@ class CardManagementService:
         )
         print(f"\n{' ' * 12}Your card has been added.")
 
-    @staticmethod
-    def generate_card_number(engine) -> str:
+    def generate_card_number(self) -> str:
         """Generate a card number and check if it is unique"""
         while True:
             account_number = ''.join([str(randint(0, 9)) for _ in range(16)])
-            if not CrudRepo(engine, CardTable).find_all_with_condition((CardTable.card_number, account_number)):
+            if not self.card_crud_repo.find_all_with_condition((CardTable.card_number, account_number)):
                 return account_number
-
-    @staticmethod
-    def get_date_with_first_day_of_month(years: int) -> date:
-        """Create an expiration date for the card. Add the indicated number of years"""
-        today_date = date.today()
-        return date(today_date.year + years, today_date.month, 1)

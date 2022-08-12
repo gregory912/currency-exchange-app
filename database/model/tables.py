@@ -19,7 +19,7 @@ class UserDataTable(base):
     main_currency = Column(String(3), nullable=False)
 
     services_to_user_data = relationship("ServiceTable", back_populates="user_data_to_services", uselist=False)
-    cards_to_user_data = relationship("CardTable", back_populates="user_data_to_cards", uselist=False) #jak nie ma use list to nie da sie zrobic add_join
+    cards_to_user_data = relationship("CardTable", back_populates="user_data_to_cards", uselist=False)
     user_accounts_to_user_data = relationship(
         "UserAccountTable", back_populates="user_data_to_user_accounts", uselist=False)
 
@@ -56,8 +56,9 @@ class CardTable(base):
     main_currency = Column(String(3), nullable=False)
 
     user_data_to_cards = relationship("UserDataTable", back_populates="cards_to_user_data")
-    card_transactions_to_cards = relationship("CardTransactionTable", back_populates="cards_to_card_transactions",
-                                              cascade="all, delete", passive_deletes=True)
+    card_transactions_to_cards = relationship(
+        "CardTransactionTable", back_populates="cards_to_card_transactions",
+        cascade="all, delete", passive_deletes=True)
 
 
 class UserAccountTable(base):

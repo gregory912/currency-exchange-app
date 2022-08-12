@@ -14,6 +14,3 @@ class Security:
     @staticmethod
     def generate_salt(rounds_: int = 4) -> bytes:
         return gensalt(rounds_)
-
-
-

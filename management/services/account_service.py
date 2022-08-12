@@ -10,10 +10,16 @@ from decimal import Decimal
 
 
 class AccountService:
-    @staticmethod
-    def switch_accounts(engine, id_user_data: int):
+    def __init__(self, engine):
+        self.engine = engine
+
+        self.user_account_crud_repo = UserAccountRepo(self.engine, UserAccountTable)
+        self.service_crud_repo = CrudRepo(self.engine, ServiceTable)
+        self.transaction_crud_repo = CrudRepo(self.engine, TransactionTable)
+
+    def switch_accounts(self, id_user_data: int):
         """Change the account for which the operations will be performed"""
-        accounts = CrudRepo(engine, UserAccountTable).find_all_with_condition((
+        accounts = self.user_account_crud_repo.find_all_with_condition((
                 UserAccountTable.id_user_data, id_user_data))
         accounts_named_tuple = [user_account_named_tuple(account) for account in accounts]
         for x, item in enumerate(accounts_named_tuple):
@@ -24,10 +30,9 @@ class AccountService:
             'Entered data contains illegal characters. Try again: ',
             (1, len(accounts_named_tuple)))
         chosen_account = accounts_named_tuple[int(chosen_operation)-1].id
-        AccountService.update_service(engine, id_user_data, chosen_account)
+        self.update_service(id_user_data, chosen_account)
 
-    @staticmethod
-    def user_without_account(engine, logged_in_user: namedtuple):
+    def user_without_account(self, logged_in_user: namedtuple):
         """Open an account for a new user"""
         print(f"{' ' * 12}You don't have any open account in the internet exchange currency. "
               f"Would you like to open a new account?")
@@ -36,60 +41,54 @@ class AccountService:
             "Enter Y or N: ",
             'Entered value is not correct. Enter Y or N: ')
         if response == 'Y':
-            AccountService.add_account(engine, logged_in_user.id)
-            AccountService.add_service(engine, logged_in_user.id)
+            self.add_account(logged_in_user.id)
+            self.add_service(logged_in_user.id)
 
-    @staticmethod
-    def check_service(engine, logged_in_user: namedtuple):
+    def check_service(self, logged_in_user: namedtuple):
         """Check if there is a service in the database for the given account"""
-        return CrudRepo(engine, ServiceTable).join_with_condition(
+        return self.service_crud_repo.join_with_condition(
             UserDataTable,
             ServiceTable.user_account_id,
             (UserDataTable.login, logged_in_user.login))
 
-    @staticmethod
-    def add_account(engine, id_user_data: int) -> bool:
+    def add_account(self, id_user_data: int) -> bool:
         """Add a new currency account. Check if the account already not exists"""
         currency = choose_currency("Select the currency for which you want to open an account:")
-        if UserAccountRepo(engine, UserAccountTable).check_if_account_exist(id_user_data, currency):
+        if self.user_account_crud_repo.check_if_account_exist(id_user_data, currency):
             return True
         else:
-            CrudRepo(engine, UserAccountTable).add(
+            self.user_account_crud_repo.add(
                 id_user_data=id_user_data,
-                account_number=AccountService.generate_account_number(engine),
+                account_number=self.generate_account_number(),
                 currency=currency,
                 balance=Decimal(0))
             return False
 
-    @staticmethod
-    def add_service(engine, id_user_data: int):
+    def add_service(self, id_user_data: int):
         """Add a new row to the service table"""
-        user_account_lastrow = CrudRepo(engine, UserAccountTable).get_last_row()[0]
-        CrudRepo(engine, ServiceTable).add(id_user_data=id_user_data, user_account_id=user_account_lastrow)
+        user_account_lastrow = self.user_account_crud_repo.get_last_row()[0]
+        self.service_crud_repo.add(id_user_data=id_user_data, user_account_id=user_account_lastrow)
 
-    @staticmethod
-    def update_service(engine, id_user_data: int, user_account_id: int = None):
+    def update_service(self, id_user_data: int, user_account_id: int = None):
         """Update an existing row in the service table"""
         if not user_account_id:
-            user_account_id = CrudRepo(engine, UserAccountTable).get_last_row()[0]
-        service_row = CrudRepo(engine, ServiceTable).find_first_with_condition((ServiceTable.id_user_data, id_user_data))
-        CrudRepo(engine, ServiceTable).update_by_id(
+            user_account_id = self.user_account_crud_repo.get_last_row()[0]
+        service_row = self.service_crud_repo.find_first_with_condition((ServiceTable.id_user_data, id_user_data))
+        self.service_crud_repo.update_by_id(
             service_row[0],
             id_user_data=id_user_data,
             user_account_id=user_account_id,
             card_id=service_row[3])
 
-    @staticmethod
-    def generate_account_number(engine) -> str:
+    def generate_account_number(self) -> str:
         """Generate an account number and check that it has not been used before"""
         while True:
             account_number = ''.join([str(randint(0, 9)) for _ in range(25)])
-            if not CrudRepo(engine, UserAccountTable).find_first_with_condition(
+            if not self.user_account_crud_repo.find_first_with_condition(
                     (UserAccountTable.account_number, account_number)):
                 return account_number
 
-    @staticmethod
-    def add_money(engine, used_account: namedtuple):
+    def add_money(self, used_account: namedtuple):
         """Add money to your account"""
         transfer_title = get_answer(
             validation_space_or_alpha_not_digit,
@@ -109,14 +108,14 @@ class AccountService:
             'Entered data is not correct. The number should contain between 20 - 26 digits. Try again: ',
             (20, 26))
         balance = used_account.balance + Decimal(amount)
-        CrudRepo(engine, UserAccountTable).update_by_id(
+        self.user_account_crud_repo.update_by_id(
             used_account.id,
             id=used_account.id,
             id_user_data=used_account.id_user_data,
             account_number=used_account.account_number,
             currency=used_account.currency,
             balance=balance)
-        CrudRepo(engine, TransactionTable).add(
+        self.transaction_crud_repo.add(
             id_user_account=used_account.id,
             payment='YES',
             payout='NO',
@@ -127,8 +126,7 @@ class AccountService:
             payer_name=payer_name,
             payer_account_number=payer_acc_number)
 
-    @staticmethod
-    def transfer_money(engine, used_account: namedtuple):
+    def transfer_money(self, used_account: namedtuple):
         """Transfer money to another account"""
         if used_account.balance == 0:
             print(f"\n{' ' * 12}You do not have sufficient funds in your account")
@@ -154,14 +152,14 @@ class AccountService:
                     'Enter the payer account number: ',
                     'Entered data is not correct. The number should contain between 20 - 26 digits. Try again: ',
                     (20, 26))
-                CrudRepo(engine, UserAccountTable).update_by_id(
+                self.user_account_crud_repo.update_by_id(
                     used_account.id,
                     id=used_account.id,
                     id_user_data=used_account.id_user_data,
                     account_number=used_account.account_number,
                     currency=used_account.currency,
                     balance=balance)
-                CrudRepo(engine, TransactionTable).add(
+                self.transaction_crud_repo.add(
                     id_user_account=used_account.id,
                     payment='NO',
                     payout='YES',

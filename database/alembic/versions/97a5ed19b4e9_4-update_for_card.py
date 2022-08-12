@@ -46,7 +46,8 @@ def downgrade() -> None:
     """TABLE CARD TRANSACTION"""
     op.drop_column('card_transactions', 'payout')
     op.drop_column('card_transactions', 'payment')
-    op.drop_column('card_transactions', 'rate_to_main_currency')
+    op.drop_column('card_transactions', 'rate_to_main_card_currency')
     op.drop_column('card_transactions', 'transaction_type')
-    op.drop_column('card_transactions', 'rate')
+    op.drop_column('card_transactions', 'rate_tu_used_account')
     op.drop_column('card_transactions', 'payer_account_number')
+    op.drop_column('card_transactions', 'amount_in_main_user_currency')

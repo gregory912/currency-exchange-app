@@ -11,28 +11,35 @@ from decimal import Decimal
 
 
 class CardTransactionsService:
-    @staticmethod
-    def pay_by_card(engine, used_card: namedtuple, logged_in_user: namedtuple):
+    def __init__(self, engine):
+        self.engine = engine
+
+        self.user_account_crud_repo = CrudRepo(self.engine, UserAccountTable)
+        self.user_data_crud_repo = CrudRepo(self.engine, UserDataTable)
+        self.card_crud_repo = CardRepo(self.engine, CardTable)
+        self.service_crud_repo = CrudRepo(self.engine, ServiceTable)
+
+    def pay_by_card(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Perform card payments taking into account all currency conversions and the correct calculation of the
         account balance after the operation."""
-        card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+        card = card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
         if not card.blocked or card.card_type == "SINGLE-USE VIRTUAL":
             type_of_payment = choose_payment_type()
-            if CardTransactionsService._check_security(type_of_payment, card):
+            if self._check_security(type_of_payment, card):
                 used_account, ented_amt, amt_exched, rate, currency, amt_for_limit_checking, commission, amount \
-                    = CardTransactionsService._find_the_best_account_for_transaction(engine, logged_in_user, card)
+                    = self._find_the_best_account_for_transaction(logged_in_user, card)
                 if not used_account:
                     return False
-                if CardTransactionsService._check_daily_limit(engine, used_account, card, amt_for_limit_checking):
+                if self._check_daily_limit(used_account, card, amt_for_limit_checking):
                     if type_of_payment == "Contactless payment":
                         if amt_for_limit_checking["result"] < card.contactless_limit:
-                            CardTransactionsService.add_card_transaction(
-                                engine, used_account, used_card, (amt_exched if amt_exched else ented_amt),
+                            self.add_card_transaction(
+                                used_account, used_card, (amt_exched if amt_exched else ented_amt),
                                 0, used_account.balance - (amt_exched if amt_exched else ented_amt),
                                 "YES", "NO", amt_for_limit_checking["info"]["rate"],
                                 "Contactless payment", rate, None, amount)
-                            CardTransactionsService.update_account(
-                                engine, used_account,
+                            self.update_account(
+                                used_account,
                                 (used_account.balance - amt_exched if amt_exched else used_account.balance - ented_amt))
                         else:
                             print(f"\n{' ' * 12}Your contactless transaction limit does not allow you to "
@@ -40,27 +47,27 @@ class CardTransactionsService:
                     elif type_of_payment == "Internet payment":
                         if (card.card_type == "STANDARD" and amt_for_limit_checking["result"] < card.internet_limit)\
                                 or card.card_type != "STANDARD":
-                            CardTransactionsService.add_card_transaction(
-                                engine, used_account, used_card, (amt_exched if amt_exched else ented_amt),
+                            self.add_card_transaction(
+                                used_account, used_card, (amt_exched if amt_exched else ented_amt),
                                 0, used_account.balance - (amt_exched if amt_exched else ented_amt),
                                 "YES", "NO", amt_for_limit_checking["info"]["rate"],
                                 "Internet payment", rate, None, amount)
-                            CardTransactionsService.update_account(
-                                engine, used_account,
+                            self.update_account(
+                                used_account,
                                 (used_account.balance - amt_exched if amt_exched else used_account.balance - ented_amt))
                             if card.card_type == "SINGLE-USE VIRTUAL":
-                                CardManagementService.delete_card(engine, used_card, logged_in_user)
+                                CardManagementService.delete_card(self.engine, used_card, logged_in_user)
                         else:
                             print(f"\n{' ' * 12}Your internet transaction limits do not allow you to "
                                   f"complete the transaction. Change your limit.")
                     elif type_of_payment == "Magnetic stripe payment":
-                        CardTransactionsService.add_card_transaction(
-                            engine, used_account, used_card, (amt_exched if amt_exched else ented_amt),
+                        self.add_card_transaction(
+                            used_account, used_card, (amt_exched if amt_exched else ented_amt),
                             commission, used_account.balance - (amt_exched if amt_exched else ented_amt),
                             "YES", "NO", amt_for_limit_checking["info"]["rate"],
                             "Magnetic stripe payment", rate, None, amount)
-                        CardTransactionsService.update_account(
-                            engine, used_account,
+                        self.update_account(
+                            used_account,
                             (used_account.balance - amt_exched if amt_exched else used_account.balance - ented_amt))
                 else:
                     print(
@@ -69,42 +76,40 @@ class CardTransactionsService:
         else:
             print(f"\n{' ' * 12}Your card is blocked. We cannot complete your transaction.")
 
-    @staticmethod
-    def withdraw_money(engine, used_card: namedtuple, logged_in_user: namedtuple):
+    def withdraw_money(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Perform card payment operations. Check that the card is not blocked and that
         it has sufficient funds. If possible, select the account with the currency you want to select from the ATM."""
-        card = card_named_tuple(CrudRepo(engine, CardTable).find_by_id(used_card.id))
+        card = card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
         if not card.blocked:
-            if CardTransactionsService._check_security('Withdrawals ATM', card):
+            if self._check_security('Withdrawals ATM', card):
                 used_account, entred_amt, amt_exched, rate, currency, amt_for_limit_checking, commission, amount \
-                    = CardTransactionsService._find_the_best_account_for_transaction(engine, logged_in_user, card, True)
+                    = self._find_the_best_account_for_transaction(logged_in_user, card, True)
                 if not used_account:
                     return False
-                if CardTransactionsService._check_daily_limit(
-                        engine, used_account, card, amt_for_limit_checking):
+                if self._check_daily_limit(used_account, card, amt_for_limit_checking):
                     if commission:
-                        print(f"\n{' ' * 12}You have exceeded the monthly exchange limit of 200 {used_card.main_currency}."
-                              f"A commission of 2% of the entered amount has been charged.")
-                    CardTransactionsService.add_card_transaction(
-                        engine, used_account, used_card, (amt_exched if amt_exched else entred_amt),
+                        print(
+                            f"\n{' ' * 12}You've exceeded the monthly exchange limit of 200 {used_card.main_currency}."
+                            f"A commission of 2% of the entered amount has been charged.")
+                    self.add_card_transaction(
+                        used_account, used_card, (amt_exched if amt_exched else entred_amt),
                         commission, used_account.balance - (amt_exched if amt_exched else entred_amt),
                         "YES", "NO", amt_for_limit_checking["info"]["rate"],
                         "Withdrawals ATM", rate, None, amount)
-                    CardTransactionsService.update_account(
-                        engine, used_account,
+                    self.update_account(
+                        used_account,
                         (used_account.balance - amt_exched if amt_exched else used_account.balance - entred_amt))
         else:
             print(f"\n{' ' * 12}Your card is blocked. We cannot complete your transaction.")
 
-    @staticmethod
-    def deposit_money(engine, used_card: namedtuple, logged_in_user: namedtuple):
+    def deposit_money(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Deposit money by card. Make a deposit to the appropriate account, if necessary, convert the amount."""
         amount = Decimal(get_answer(
             validation_decimal,
             'Enter the amount: ',
             'Entered data contains illegal characters. Try again: '))
         currency = choose_currency('Choose the currency in which you want to deposit money: ')
-        accounts = CrudRepo(engine, UserAccountTable).find_all_with_condition(
+        accounts = self.user_account_crud_repo.find_all_with_condition(
             (UserAccountTable.id_user_data, logged_in_user.id))
         accounts = [user_account_named_tuple(item) for item in accounts]
         payer_acc_number = get_answer(
@@ -124,14 +129,13 @@ class CardTransactionsService:
             rate = Decimal(response['info']['rate'])
         else:
             rate = 1
-        CardTransactionsService.add_card_transaction(
-            engine, used_account, used_card, amount, 0, used_account.balance + amount,
-            "NO", "YES", 0, "Deposit money", rate, payer_acc_number, 0)
-        CardTransactionsService.update_account(engine, used_account, used_account.balance + amount)
+        self.add_card_transaction(
+            used_account, used_card, amount, 0, used_account.balance + amount,
+            "NO", "YES", 0, "Deposit money", rate, payer_acc_number, Decimal(0))
+        self.update_account(used_account, used_account.balance + amount)
 
-    @staticmethod
     def _find_the_best_account_for_transaction(
-            engine, logged_in_user: namedtuple, card: namedtuple, commission: bool = False) -> tuple:
+            self, logged_in_user: namedtuple, card: namedtuple, commission: bool = False) -> tuple:
         """If it is possible, use an account with the same currency in which you want to make transactions.
         If you do not have such an account, or you have insufficient funds on this account,
         use another account that has the appropriate funds.
@@ -142,7 +146,7 @@ class CardTransactionsService:
             Once found, remove the account from the list and return it"""
             acc_nb_in_same_cur = [i for i in accounts if i.currency == currency and i.balance > entered_amount]
             acc_nb_in_same_cur_indx = accounts.index(acc_nb_in_same_cur[0]) if acc_nb_in_same_cur else None
-            return accounts.pop(acc_nb_in_same_cur_indx) if acc_nb_in_same_cur_indx != None else None
+            return accounts.pop(acc_nb_in_same_cur_indx) if acc_nb_in_same_cur_indx is not None else None
 
         entered_amount = Decimal(get_answer(
             validation_decimal,
@@ -150,11 +154,11 @@ class CardTransactionsService:
             'Entered data contains illegal characters. Try again: '))
         currency = choose_currency('Choose the currency you want to pay in: ')
         if commission:
-            entered_amount, amount, commission = CardTransactionsService._check_and_get_commission(
-                engine, logged_in_user, currency, entered_amount)
+            entered_amount, amount, commission = self._check_and_get_commission(
+                logged_in_user, currency, entered_amount)
         else:
             amount, commission = None, None
-        accounts = CrudRepo(engine, UserAccountTable).find_all_with_condition(
+        accounts = self.user_account_crud_repo.find_all_with_condition(
             (UserAccountTable.id_user_data, logged_in_user.id))
         accounts = [user_account_named_tuple(item) for item in accounts]
         account_with_main_currency = find_account_with_same_currency_as_transaction()
@@ -182,8 +186,7 @@ class CardTransactionsService:
             amt_for_limit_checking = {"result": entered_amount, "info": {"rate": 1}}
         return used_account, entered_amount, amount_exched, rate, currency, amt_for_limit_checking, commission, amount
 
-    @staticmethod
-    def _check_and_get_commission(engine, logged_in_user, currency_for_transaction, entered_amount) -> tuple:
+    def _check_and_get_commission(self, logged_in_user, currency_for_transaction, entered_amount) -> tuple:
         """The entered amount in a given currency is converted to the main currency
         (if a currency other than the main currency of the account has been entered) for the account to check
         if any transactions should be collected. The transaction is charged in
@@ -202,7 +205,7 @@ class CardTransactionsService:
         def check_commisions_based_on_monthly_transactions(amount: Decimal) -> tuple:
             """Check if a commission is required.
             The amount and commission are stated in the user's primary currency."""
-            all_exchanges = CardRepo(engine, CardTable).get_monthly_card_trans_for_user(
+            all_exchanges = self.card_crud_repo.get_monthly_card_trans_for_user(
                 logged_in_user.id, fst_day_of_this_month(), fst_day_of_next_month())
             transaction_sum = [(item[0] if item[0] else 0) for item in all_exchanges]
             if sum(transaction_sum) + amount > 200 or len(transaction_sum) > 5:
@@ -216,11 +219,10 @@ class CardTransactionsService:
             logged_in_user.main_currency, currency_for_transaction, str(amount_after_checking))
         return Decimal(result["result"]), amount_after_checking, commission_after_checking
 
-    @staticmethod
-    def _check_daily_limit(engine, used_account: namedtuple, card: namedtuple, exchanged_amount: dict) -> bool:
+    def _check_daily_limit(self, used_account: namedtuple, card: namedtuple, exchanged_amount: dict) -> bool:
         """Check if the limit of daily transactions for a given card has not been exceeded"""
         today_date = date.today()
-        transactions_one_day = UserAccountRepo(engine, CardTransactionTable).find_btwn_dates(
+        transactions_one_day = UserAccountRepo(self.engine, CardTransactionTable).find_btwn_dates(
             (
                 CardTransactionTable.transaction_time,
                 today_date,
@@ -237,6 +239,39 @@ class CardTransactionsService:
             return False
         else:
             return True
+
+    def update_account(self, used_account: namedtuple, amount: Decimal):
+        self.user_account_crud_repo.update_by_id(
+            used_account.id,
+            account_number=used_account.account_number,
+            currency=used_account.currency,
+            balance=amount)
+
+    def add_card_transaction(
+            self, used_account: namedtuple, used_card: namedtuple, amount: Decimal,
+            commission: int, balance: Decimal, payout: str, payment: str,
+            rate_to_main_currency: int, transaction_type: str, rate: Decimal, payer_acc: str | None,
+            amount_in_main_user_currency: Decimal):
+        CrudRepo(self.engine, CardTransactionTable).add(
+            id_user_account=used_account.id,
+            id_card=used_card.id,
+            transaction_time=datetime.now(),
+            amount=amount,
+            commission_in_main_user_currency=commission,
+            balance=balance,
+            payer_name=get_answer(
+                validation_space_or_alpha_not_digit,
+                'Enter the payer name: ',
+                'Entered data contains illegal characters. Try again: '),
+            payout=payout,
+            payment=payment,
+            rate_to_main_card_currency=Decimal(rate_to_main_currency),
+            transaction_type=transaction_type,
+            rate_tu_used_account=rate,
+            payer_account_number=payer_acc,
+            amount_in_main_user_currency=amount_in_main_user_currency
+        )
+        print(f"\n{' ' * 12}The transaction was successful.")
 
     @staticmethod
     def _check_security(type_of_payment: str, card: namedtuple) -> bool:
@@ -278,38 +313,3 @@ class CardTransactionsService:
                     return False
             else:
                 print(f"\n{' ' * 12}You cannot withdraw money from a virtual card. Change card.")
-
-    @staticmethod
-    def update_account(engine, used_account: namedtuple, amount: Decimal):
-        CrudRepo(engine, UserAccountTable).update_by_id(
-            used_account.id,
-            account_number=used_account.account_number,
-            currency=used_account.currency,
-            balance=amount)
-
-    @staticmethod
-    def add_card_transaction(
-            engine, used_account: namedtuple, used_card: namedtuple, amount: Decimal,
-            commission: int, balance: Decimal, payout: str, payment: str,
-            rate_to_main_currency: int, transaction_type: str, rate: Decimal, payer_acc: str | None,
-            amount_in_main_user_currency: Decimal):
-        CrudRepo(engine, CardTransactionTable).add(
-            id_user_account=used_account.id,
-            id_card=used_card.id,
-            transaction_time=datetime.now(),
-            amount=amount,
-            commission_in_main_user_currency=commission,
-            balance=balance,
-            payer_name=get_answer(
-                validation_space_or_alpha_not_digit,
-                'Enter the payer name: ',
-                'Entered data contains illegal characters. Try again: '),
-            payout=payout,
-            payment=payment,
-            rate_to_main_card_currency=Decimal(rate_to_main_currency),
-            transaction_type=transaction_type,
-            rate_tu_used_account=rate,
-            payer_account_number=payer_acc,
-            amount_in_main_user_currency=amount_in_main_user_currency
-        )
-        print(f"\n{' ' * 12}The transaction was successful.")
