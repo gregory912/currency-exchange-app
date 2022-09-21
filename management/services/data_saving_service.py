@@ -136,7 +136,7 @@ class OperationsPDF(FPDF):
         self.ln(10)
 
     def get_statement_header(self):
-        """Show the header for the columns in which the data from the transaction will be displayed"""
+        """Show the header for the columns in which the data from the t will be displayed"""
         self.set_font('helvetica', 'B', 12)
         self.cell(10, 0, "Date", border=0, ln=1, align='C', fill=False)
         self.cell(140, 0, "Customer", border=0, ln=1, align='C', fill=False)
@@ -147,7 +147,7 @@ class OperationsPDF(FPDF):
         self.ln(7)
 
     def get_statement_first_line(self, used_account: namedtuple, row: namedtuple):
-        """Display main transaction data"""
+        """Display main t data"""
         self.set_font('helvetica', 'I', 10)
         self.cell(50, 0, str(row.date), border=0, ln=1, align='L', fill=False)
         self.cell(140, 0, row.customer, border=0, ln=1, align='C', fill=False)
@@ -157,7 +157,7 @@ class OperationsPDF(FPDF):
         self.ln(4)
 
     def get_statement_second_line(self, row: namedtuple, logged_in_user: namedtuple):
-        """Display optional transaction data"""
+        """Display optional t data"""
         self.set_font('helvetica', 'I', 6)
         if row.acc_number and (not row.rate or row.rate == 1.00):
             self.cell(140, 0, f"Account nb: {row.acc_number}", border=0, ln=1, align='C', fill=False)
@@ -179,7 +179,7 @@ class OperationsPDF(FPDF):
 
     @staticmethod
     def currency(currency: str, row: str) -> str:
-        """Combine the currency symbol with the transaction amount"""
+        """Combine the currency symbol with the t amount"""
         if row:
             match currency:
                 case "GBP":

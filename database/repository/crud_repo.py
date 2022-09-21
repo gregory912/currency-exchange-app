@@ -112,7 +112,7 @@ class CrudRepo:
             result = conn.execute(select(columns).join(item)).all()
             return [item for item in result]
 
-    def join_with_condition(self, item, columns: tuple, condition: tuple):
+    def join_with_condition(self, item, columns: tuple, condition: tuple) -> list:
         """Join columns for the given tables. Return elements for the given elements"""
         with self._engine.begin() as conn:
             result = conn.execute(select(columns).join(item).where(condition[0] == condition[1])).all()

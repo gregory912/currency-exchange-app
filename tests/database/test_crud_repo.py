@@ -19,7 +19,7 @@ class MyTestCase(unittest.TestCase):
     card_crud_repo = CrudRepo(engine, CardTable)
 
     def test_add_and_get_last_row(self):
-        """The function tests add and get_last_row methods from crud_repo file"""
+        """The function tests add and get_last_row methods from repo file"""
         data = get_user_account(1, draw_numbers(26), 800.00)
         self.user_account_crud_repo.add(**data)
         received_data = self.user_account_crud_repo.get_last_row()
@@ -27,7 +27,7 @@ class MyTestCase(unittest.TestCase):
                          'Method test_add_and_get_last_row return wrong values')
 
     def test_add_join(self):
-        """The function tests add_join method from crud_repo file"""
+        """The function tests add_join method from repo file"""
         user_data = get_user_data(f"{draw_letters(10)}@op.pl", 9, 10)
         cards_data = get_cards(draw_numbers(16))
         user = UserDataTable(**user_data)

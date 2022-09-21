@@ -100,7 +100,7 @@ def transaction_named_tuple(items):
     return Transaction(*items)
 
 
-def transactions_to_statement_named_tuple(items):
+def transactions_for_statement_named_tuple(items):
     TransactionsToStatement = namedtuple(
         "TransactionsToStatement",
         "date "

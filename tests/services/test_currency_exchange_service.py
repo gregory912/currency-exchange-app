@@ -45,7 +45,7 @@ class MyTestCase(unittest.TestCase):
     @patch('builtins.print', return_value=None)
     @patch('management.services.currency_exchange_service.CurrencyExchangeService._available_accounts')
     def test_transaction_amount_higher_than_balance(self, mock_avl_acc, mock_print, mock_chosen_op):
-        """Check if a transaction greater than the balance will be returned to 0"""
+        """Check if a t greater than the balance will be returned to 0"""
         mock_avl_acc.return_value = [1, 2]
         mock_chosen_op.return_value = Decimal(10)
         logged_in_user = user_data_named_tuple((
