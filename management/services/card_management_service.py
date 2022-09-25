@@ -2,8 +2,8 @@ from database.repository.crud_repo import CrudRepo
 from database.repository.card_repo import CardRepo
 from database.model.tables import *
 from management.conversions import used_card_named_tuple, card_named_tuple
-from management.services.utils import *
-from datetime import date
+from management.services.answers import *
+from management.services.common import *
 from decimal import Decimal
 
 
@@ -17,9 +17,11 @@ class CardManagementService:
         self.service_crud_repo = CrudRepo(self.engine, ServiceTable)
 
     def _get_service(self, id_user_data: int):
+        """Get the user's service information from the database"""
         return self.service_crud_repo.find_first_with_condition((ServiceTable.id_user_data, id_user_data))
 
     def _update_service(self, service_row, id_user_data: int, value: int | None):
+        """Update the user service in the database"""
         return self.service_crud_repo.update_by_id(
             service_row[0],
             id_user_data=id_user_data,
@@ -27,7 +29,16 @@ class CardManagementService:
             card_id=value)
 
     def _get_all_cards(self, id_user_data: int):
+        """Get all user cards"""
         return self.card_crud_repo.find_all_cards(id_user_data)
+
+    def _get_card_details(self, used_card: namedtuple) -> namedtuple:
+        """The function returns all card data"""
+        return card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
+
+    def _update_card(self, card_dict: dict, card: namedtuple):
+        """Update the card"""
+        return self.card_crud_repo.update_by_id(card.id, **card_dict)
 
 
 class CardManagement(CardManagementService):
@@ -46,6 +57,7 @@ class CardManagement(CardManagementService):
         self._update_service(service_row, id_user_data, card_id)
 
     def _get_id_of_the_last_card_added(self):
+        """Get the id of the last card added"""
         return self.card_crud_repo.get_last_row()[0]
 
     def switch_cards(self, id_user_data: int):
@@ -139,7 +151,7 @@ class AddCard(CardManagementService):
         """Check if the card can be added.
         The user must have an account for the given currency card.
         Check if the limit of the number of cards is met."""
-        if not self._check_if_you_have_account_for_selected_currency(chosen_currency, available_account_currencies):
+        if not self._has_account_for_selected_currency(chosen_currency, available_account_currencies):
             return False
 
         if card_type == 'STANDARD':
@@ -181,9 +193,9 @@ class AddCard(CardManagementService):
             valid_thru=get_date_with_first_day_of_month(3),
             cvv=generate_random_number(3),
             blocked=False if card_type != "SINGLE-USE VIRTUAL" else None,
-            daily_limit=Decimal(2000),
-            internet_limit=Decimal(1000) if card_type == "STANDARD" else None,
-            contactless_limit=Decimal(100) if card_type == "STANDARD" else None,
+            daily_limit=Decimal('2000'),
+            internet_limit=Decimal('1000') if card_type == "STANDARD" else None,
+            contactless_limit=Decimal('100') if card_type == "STANDARD" else None,
             card_pin=generate_random_number(4) if card_type == "STANDARD" else None,
             sec_online_transactions=True,
             sec_location=True,
@@ -196,7 +208,7 @@ class AddCard(CardManagementService):
         )
 
     @staticmethod
-    def _check_if_you_have_account_for_selected_currency(chosen_currency: str, available_acc_currencies: list) -> bool:
+    def _has_account_for_selected_currency(chosen_currency: str, available_acc_currencies: list) -> bool:
         """Check you have an account for the selected currency"""
         if chosen_currency not in available_acc_currencies:
             print(f"\n{' ' * 12}You cannot add a card for a currency other than your accounts.")
@@ -230,7 +242,7 @@ class BlockCard(CardManagementService):
         print(f"{' ' * 12}Would you like to block your card?")
         if GetReplyAnswer().get_value() == "Y":
             card_dict = self._update_security(True)
-            self._update_card(card_dict)
+            self._update_card(card_dict, self.card)
 
             print(f"{' ' * 12}Your card has been blocked.")
 
@@ -239,13 +251,9 @@ class BlockCard(CardManagementService):
         print(f"{' ' * 12}Would you like to unlock your card?")
         if GetReplyAnswer().get_value() == "Y":
             card_dict = self._update_security(False)
-            self._update_card(card_dict)
+            self._update_card(card_dict, self.card)
 
             print(f"{' ' * 12}Your card has been unlocked.")
-
-    def _update_card(self, card_dict: dict):
-        """Update the card"""
-        return self.card_crud_repo.update_by_id(self.card.id, **card_dict)
 
     def _update_security(self, value: bool) -> dict:
         """Update the security on the card"""
@@ -273,14 +281,10 @@ class ShowCardPin(CardManagementService):
                 logged_in_user = self._get_user_data(login)
 
                 if logged_in_user and self._check_security(password, logged_in_user):
-                    card = self._get_card_pin(used_card)
+                    card = self._get_card_details(used_card)
                     print(f"\n{' ' * 12}The pin for your card is: {card.card_pin}")
                 else:
                     print(f"\n{' ' * 12}The entered data is incorrect.")
-
-    def _get_card_pin(self, used_card: namedtuple):
-        """Get a card pin"""
-        return card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
 
     def _get_user_data(self, login: str):
         """Get user data"""
@@ -347,23 +351,15 @@ class CardSecurity(CardManagementService):
             print(f"{' ' * 12}Do you want to block it?")
         else:
             print(f"{' ' * 12}Currently, these transactions are blocked.")
-            print(f"{' ' * 12}Do you want to unblock it?")
+            print(f"{' ' * 12}Do you want to unlock it?")
 
         if GetReplyAnswer().get_value() == "Y":
             new_sec = False if security else True
 
             card_dict = self._update_limit(sec_type, new_sec)
-            self._update_card(card_dict)
+            self._update_card(card_dict, self.card)
 
             print(f"{' ' * 12}Security settings for your account have been changed.")
-
-    def _get_card_details(self, used_card: namedtuple):
-        """The function returns all card data"""
-        return card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
-
-    def _update_card(self, card_dict: dict):
-        """Update the card"""
-        return self.card_crud_repo.update_by_id(self.card.id, **card_dict)
 
     def _update_limit(self, sec_type: str, new_sec: bool) -> dict:
         """Update the security on the card"""
@@ -450,13 +446,9 @@ class CardLimit(CardManagementService):
             if self._entered_limit_too_small(new_limit):
 
                 card_dict = self._update_limit(limit_type, new_limit)
-                self._update_card(card_dict)
+                self._update_card(card_dict, self.card)
 
                 print(f"{' ' * 12}Your limit has been updated.")
-
-    def _update_card(self, card_dict: dict):
-        """Update the card"""
-        return self.card_crud_repo.update_by_id(self.card.id, **card_dict)
 
     def _update_limit(self, limit_type: str, new_limit: Decimal) -> dict:
         """Update the limit on the card"""

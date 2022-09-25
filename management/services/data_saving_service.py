@@ -1,6 +1,6 @@
+from management.services.answers import GetReplyWithValueChosenOper, GetReplyFilePath, GetReplyFileName
 from openpyxl import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
-from management.validation import get_answer, validation_chosen_operation, validation_file_path, validation_file_name
 from fpdf import FPDF
 from datetime import date
 from collections import namedtuple
@@ -18,19 +18,9 @@ class SavingService:
                 1. XLSX
                 2. PDF
             """)
-            chosen_operation = get_answer(
-                validation_chosen_operation,
-                'Enter chosen operation: ',
-                'Entered data contains illegal characters. Try again: ',
-                (1, 2))
-            file_path = get_answer(
-                validation_file_path,
-                r"Enter the path to the file in the format  C:\Folder\Subfolder  : ",
-                'The path entered does not exist. Try again')
-            file_name = get_answer(
-                validation_file_name,
-                r"Enter a file name without an extension: ",
-                'Entered data contains illegal characters. Try again')
+            chosen_operation = GetReplyWithValueChosenOper().get_value(2)
+            file_path = GetReplyFilePath().get_value()
+            file_name = GetReplyFileName().get_value()
             match chosen_operation:
                 case '1':
                     file_path = self.create_path(file_path, file_name, "xlsx")
@@ -136,7 +126,7 @@ class OperationsPDF(FPDF):
         self.ln(10)
 
     def get_statement_header(self):
-        """Show the header for the columns in which the data from the t will be displayed"""
+        """Show the header for the columns in which the data from the ttransaction will be displayed"""
         self.set_font('helvetica', 'B', 12)
         self.cell(10, 0, "Date", border=0, ln=1, align='C', fill=False)
         self.cell(140, 0, "Customer", border=0, ln=1, align='C', fill=False)
@@ -147,7 +137,7 @@ class OperationsPDF(FPDF):
         self.ln(7)
 
     def get_statement_first_line(self, used_account: namedtuple, row: namedtuple):
-        """Display main t data"""
+        """Display main transaction data"""
         self.set_font('helvetica', 'I', 10)
         self.cell(50, 0, str(row.date), border=0, ln=1, align='L', fill=False)
         self.cell(140, 0, row.customer, border=0, ln=1, align='C', fill=False)
@@ -157,7 +147,7 @@ class OperationsPDF(FPDF):
         self.ln(4)
 
     def get_statement_second_line(self, row: namedtuple, logged_in_user: namedtuple):
-        """Display optional t data"""
+        """Display optional transaction data"""
         self.set_font('helvetica', 'I', 6)
         if row.acc_number and (not row.rate or row.rate == 1.00):
             self.cell(140, 0, f"Account nb: {row.acc_number}", border=0, ln=1, align='C', fill=False)
@@ -179,7 +169,7 @@ class OperationsPDF(FPDF):
 
     @staticmethod
     def currency(currency: str, row: str) -> str:
-        """Combine the currency symbol with the t amount"""
+        """Combine the currency symbol with the transaction amount"""
         if row:
             match currency:
                 case "GBP":

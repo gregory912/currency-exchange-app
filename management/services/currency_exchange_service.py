@@ -1,9 +1,9 @@
 from management.conversions import user_account_named_tuple
 from management.services.common import *
+from management.services.answers import GetReplyAmount, GetReplyWithValueChosenAccCurExch
 from database.model.tables import UserAccountTable, CurrencyExchangeTable, UserDataTable
 from database.repository.crud_repo import CrudRepo
 from database.repository.user_account_repo import UserAccountRepo
-from management.services.utils import GetReplyAmount, GetReplyWithValueChosenAccCurExch
 from datetime import datetime
 from requests import request
 from json import loads
@@ -158,7 +158,7 @@ class CurrencyExchangeService:
             print(f"\n{' ' * 12}You have exceeded the monthly exchange limit of 1000 {currency}. "
                   f"A commission of 0.5% of the entered amount has been charged.")
 
-            return amount - (amount * Decimal(0.005)), amount * Decimal(0.005)
+            return self._get_amount_minus_commission(amount), self._get_rate_from_amount(amount)
         return amount, 0
 
     def _get_all_monthly_exchanges(self, id_user_data: int) -> list[tuple]:
@@ -181,6 +181,14 @@ class CurrencyExchangeService:
     def _get_sum_of_all_exchanges(all_exchanges: list[tuple]) -> Decimal:
         """Get a total of all currency exchanges"""
         return sum([item[2] for item in all_exchanges])
+
+    @staticmethod
+    def _get_amount_minus_commission(amount):
+        return round(amount - (amount * Decimal('0.005')), 4)
+
+    @staticmethod
+    def _get_rate_from_amount(amount):
+        return round(amount * Decimal('0.005'), 4)
 
 
 class CurrencyExchange:

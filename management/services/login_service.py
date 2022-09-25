@@ -1,6 +1,7 @@
 from database.repository.crud_repo import CrudRepo
 from database.model.tables import UserDataTable
-from management.services.utils import *
+from management.services.answers import *
+from management.services.common import *
 
 
 class Login:
@@ -9,14 +10,6 @@ class Login:
 
         self.user_data_crud_repo = CrudRepo(self.engine, UserDataTable)
         self.user = None
-
-    def _find_user(self):
-        """Find a user based on the entered login"""
-        self.user = self.user_data_crud_repo.find_first_with_condition((UserDataTable.login, input('Enter your login: ')))
-
-    def _check_security(self):
-        """Check that the password entered matches the encrypted password in the database"""
-        return Security.check_password(input('Enter your password: '), self.user.password)
 
     def get_user(self):
         """For valid data, return the user"""
@@ -28,6 +21,14 @@ class Login:
                 return self.user
             else:
                 print(f'{" " * 12}Account not found for the given data. Try again.')
+
+    def _find_user(self):
+        """Find a user based on the entered login"""
+        self.user = self.user_data_crud_repo.find_first_with_condition((UserDataTable.login, input('Enter your login: ')))
+
+    def _check_security(self):
+        """Check that the password entered matches the encrypted password in the database"""
+        return Security.check_password(input('Enter your password: '), self.user.password)
 
     @staticmethod
     def does_account_exist():

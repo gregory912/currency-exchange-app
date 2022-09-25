@@ -1,8 +1,8 @@
-from management.conversions import *
 from database.model.tables import CurrencyExchangeTable, CardTransactionTable, TransactionTable, UserAccountTable
 from database.model.tables import CardTable
 from database.repository.crud_repo import CrudRepo
 from database.repository.user_account_repo import UserAccountRepo
+from management.conversions import *
 from abc import ABC, abstractmethod
 
 
@@ -122,36 +122,36 @@ class FilterTransactions:
     def filter_transactions(self, transactions: list[namedtuple], used_account: namedtuple) -> list[namedtuple]:
         """Filter the results you get from different namedtuple to one general type"""
         filtred_transactions = []
-        for t in transactions:
+        for transaction in transactions:
 
-            if type(t).__name__ == 'ExchangeCurrency':
+            if type(transaction).__name__ == 'ExchangeCurrency':
 
-                if used_account.id == t.id_user_account_out:
+                if used_account.id == transaction.id_user_account_out:
                     filtred_transactions.append(FilterItemsExchangeCurrencyOut().get_named_tuple(
-                        t, self._get_currency_from_which_money_was_exchanged(t)))
+                        transaction, self._get_currency_from_which_money_was_exchanged(transaction)))
                 else:
                     filtred_transactions.append(FilterItemsExchangeCurrencyIn().get_named_tuple(
-                        t, used_account.currency))
+                        transaction, used_account.currency))
 
-            elif type(t).__name__ == 'Transaction':
-                if t.payment == 'YES':
-                    filtred_transactions.append(FilterItemsTransactionPayment().get_named_tuple(t))
+            elif type(transaction).__name__ == 'Transaction':
+                if transaction.payment == 'YES':
+                    filtred_transactions.append(FilterItemsTransactionPayment().get_named_tuple(transaction))
                 else:
-                    filtred_transactions.append(FilterItemsTransactionPayout().get_named_tuple(t))
+                    filtred_transactions.append(FilterItemsTransactionPayout().get_named_tuple(transaction))
 
-            elif type(t).__name__ == 'CardTransaction':
-                card_number = self._get_card_number_from_card_transaction(t)
-                if t.payout == 'YES':
+            elif type(transaction).__name__ == 'CardTransaction':
+                card_number = self._get_card_number_from_card_transaction(transaction)
+                if transaction.payout == 'YES':
                     filtred_transactions.append(FilterItemsCardTransactionPayout().get_named_tuple(
-                        t, card_number[2] if card_number else "NOT EXIST"))
+                        transaction, card_number[2] if card_number else "NOT EXIST"))
                 else:
                     filtred_transactions.append(FilterItemsCardTransactionPayment().get_named_tuple(
-                        t, card_number[2] if card_number else "NOT EXIST"))
+                        transaction, card_number[2] if card_number else "NOT EXIST"))
 
         return filtred_transactions
 
     def _get_card_number_from_card_transaction(self, transaction):
-        """Get the card number from which the transaction was made"""
+        """Get the card number from which the transation was made"""
         return self.card_crud_repo.find_by_id(transaction.id_card)
 
     def _get_currency_from_which_money_was_exchanged(self, transaction):
@@ -173,10 +173,10 @@ class FilterItemsExchangeCurrencyOut(FilterItems):
 
 
 class FilterItemsExchangeCurrencyIn(FilterItems):
-    def get_named_tuple(self, transaction, parameter=''):
+    def get_named_tuple(self, t, parameter=''):
         return transactions_for_statement_named_tuple((
-            transaction.transaction_time, f"Exchanged to {parameter}", "", "", "", transaction.transfer_amount_in,
-            transaction.exchange_rate_in, transaction.balance_in, transaction.commission_in_main_user_currency))
+            t.transaction_time, f"Exchanged to {parameter}", "", "", "", t.transfer_amount_in,
+            t.exchange_rate_in, t.balance_in, t.commission_in_main_user_currency))
 
 
 class FilterItemsTransactionPayment(FilterItems):

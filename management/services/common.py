@@ -1,8 +1,10 @@
 from management.conversions import dates_named_tuple
-from management.validation import *
+from management.validation import get_answer, validation_datetime
+from management.services.answers import GetReplyWithValuePaymentType, GetReplyWithValueCardType, \
+    GetReplyWithValueChosenCur
 from collections import namedtuple
 from random import randint
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 
 def choose_payment_type() -> str:
@@ -13,11 +15,7 @@ def choose_payment_type() -> str:
         2. Magnetic stripe payment
         3. Internet payment
         """)
-    chosen_operation = get_answer(
-        validation_chosen_operation,
-        'Enter the selected type of payment: ',
-        'Entered data contains illegal characters. Try again: ',
-        (1, 3))
+    chosen_operation = GetReplyWithValuePaymentType().get_value(3)
     match chosen_operation:
         case '1':
             return 'Contactless payment'
@@ -35,11 +33,7 @@ def choose_card_type() -> str:
         2. SINGLE-USE VIRTUAL
         3. MULTI-USE VIRTUAL
         """)
-    chosen_operation = get_answer(
-        validation_chosen_operation,
-        'Enter chosen card type: ',
-        'Entered data contains illegal characters. Try again: ',
-        (1, 3))
+    chosen_operation = GetReplyWithValueCardType().get_value(3)
     match chosen_operation:
         case '1':
             return 'STANDARD'
@@ -58,11 +52,7 @@ def choose_currency(text: str) -> str:
         3. CHF
         4. EUR
         """)
-    chosen_operation = get_answer(
-        validation_chosen_operation,
-        'Enter chosen currency: ',
-        'Entered data contains illegal characters. Try again: ',
-        (1, 4))
+    chosen_operation = GetReplyWithValueChosenCur().get_value(4)
     match chosen_operation:
         case '1':
             return 'GBP'

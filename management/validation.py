@@ -25,7 +25,7 @@ def validation_digit(entered_item: str, min_length: int, max_length: int) -> boo
 
 
 def validation_space_or_alpha_not_digit(entered_item: str) -> bool:
-    """Check if the entered value contains space, letters"""
+    """Check that the entered value contains only digits and that the number of digits is within the range"""
     if not entered_item:
         return False
     if entered_item[:1] == ' ' or entered_item[-1:] == ' ':

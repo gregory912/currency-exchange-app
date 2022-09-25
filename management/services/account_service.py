@@ -1,24 +1,27 @@
 from database.repository.crud_repo import CrudRepo
 from database.repository.user_account_repo import UserAccountRepo
 from database.model.tables import *
-from management.conversions import *
-from management.services.utils import *
-from datetime import datetime
+from management.conversions import user_account_named_tuple
+from management.services.answers import *
+from management.services.common import namedtuple, choose_currency, generate_random_number
 from decimal import Decimal
 
 
-class AccountOperations:
+class AccountService:
     def __init__(self, engine):
         self.engine = engine
 
-        self.service_op = ServiceOperations(self.engine)
         self.user_account_crud_repo = UserAccountRepo(self.engine, UserAccountTable)
+        self.transaction_crud_repo = CrudRepo(self.engine, TransactionTable)
+        self.service_crud_repo = CrudRepo(self.engine, ServiceTable)
 
+
+class AccountOperations(AccountService):
     def user_without_account(self, logged_in_user: namedtuple):
         """Open an account for a new user"""
         if GetReplyUserWithoutAcc().get_value() == 'Y':
             self.add_account(logged_in_user.id)
-            self.service_op.add_service(logged_in_user.id)
+            ServiceOperations(self.engine).add_service(logged_in_user.id)
 
     def add_account(self, id_user_data: int) -> bool:
         """Add a new currency account. Check if the account already not exists"""
@@ -35,7 +38,7 @@ class AccountOperations:
             id_user_data=id_user_data,
             account_number=self._generate_account_number(),
             currency=currency,
-            balance=Decimal(0))
+            balance=Decimal('0'))
 
     def _generate_account_number(self) -> str:
         """Generate an account number and check that it has not been used before"""
@@ -49,13 +52,7 @@ class AccountOperations:
         return self.user_account_crud_repo.find_first_with_condition((UserAccountTable.account_number, account_number))
 
 
-class AddMoneyService:
-    def __init__(self, engine):
-        self.engine = engine
-
-        self.user_account_crud_repo = UserAccountRepo(self.engine, UserAccountTable)
-        self.transaction_crud_repo = CrudRepo(self.engine, TransactionTable)
-
+class AccountAddMoney(AccountService):
     def add_money(self, used_account: namedtuple):
         """Add money to your account"""
         amount = Decimal(GetReplyAmount().get_value())
@@ -86,13 +83,7 @@ class AddMoneyService:
             payer_account_number=GetReplyPayerAccNumber().get_value())
 
 
-class TransferMoneyService:
-    def __init__(self, engine):
-        self.engine = engine
-
-        self.user_account_crud_repo = UserAccountRepo(self.engine, UserAccountTable)
-        self.transaction_crud_repo = CrudRepo(self.engine, TransactionTable)
-
+class AccountTransferMoney(AccountService):
     def transfer_money(self, used_account: namedtuple):
         """Transfer money to another account"""
         if self._check_user_account_balance(used_account):
@@ -136,20 +127,14 @@ class TransferMoneyService:
 
     @staticmethod
     def _check_balance_after_transaction(balance: Decimal) -> bool:
-        """Check that the amount after the t is not negative"""
+        """Check that the amount after the transaction is not negative"""
         if balance < 0:
             print(f"\n{' ' * 12}You do not have sufficient funds in your account")
             return False
         return True
 
 
-class ServiceOperations:
-    def __init__(self, engine):
-        self.engine = engine
-
-        self.user_account_crud_repo = UserAccountRepo(self.engine, UserAccountTable)
-        self.service_crud_repo = CrudRepo(self.engine, ServiceTable)
-
+class ServiceOperations(AccountService):
     def add_service(self, id_user_data: int):
         """Add a new row to the service table"""
         self.service_crud_repo.add(id_user_data=id_user_data, user_account_id=self._get_user_account_lastrow())
@@ -183,12 +168,9 @@ class ServiceOperations:
             (UserDataTable.login, logged_in_user.login))
 
 
-class SwitchAccount:
+class SwitchAccount(AccountService):
     def __init__(self, engine):
-        self.engine = engine
-
-        self.update_service = ServiceOperations(self.engine)
-        self.user_account_crud_repo = UserAccountRepo(self.engine, UserAccountTable)
+        super().__init__(engine)
 
         self.accounts = []
         self.accounts_named_tuple = tuple()
@@ -202,7 +184,7 @@ class SwitchAccount:
 
         chosen_operation = GetReplyWithValueChosenAcc().get_value(self.accounts_named_tuple)
 
-        self.update_service.update_service(
+        ServiceOperations(self.engine).update_service(
             id_user_data, self._get_id_of_chosen_account(chosen_operation))
 
     def _get_all_accounts_for_user(self, id_user_data: int) -> list[tuple]:

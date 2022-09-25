@@ -2,7 +2,7 @@ from tests.database.generate_data_for_tests import GenerateData
 from tests.database.common import *
 from database.repository.crud_repo import CrudRepo
 from database.repository.card_repo import CardRepo
-from database.model.tables import UserAccountTable, UserDataTable, CardTable, CardTransactionTable
+from database.model.tables import UserAccountTable, UserDataTable, CardTable, CardTransactionTable, base
 from management.services.common import fst_day_of_this_month, fst_day_of_next_month
 from sqlalchemy import create_engine
 from decimal import Decimal
@@ -16,6 +16,8 @@ class MyTestCase(unittest.TestCase):
     port = 3310
     url = f'mysql://{username}:{password}@localhost:{port}/{database}'
     engine = create_engine(url, future=True)
+    metadata = base.metadata
+    metadata.create_all(engine)
     user_account_crud_repo = CrudRepo(engine, UserAccountTable)
     user_data_crud_repo = CrudRepo(engine, UserDataTable)
     card_card_repo = CardRepo(engine, CardTable)

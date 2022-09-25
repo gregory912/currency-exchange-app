@@ -1,16 +1,16 @@
-from abc import ABC, abstractmethod
 from management.security.security import Security
-from management.services.common import *
+from management.validation import *
+from abc import ABC, abstractmethod
 
 
 class GetReply(ABC):
     @abstractmethod
-    def get_value(self):
+    def get_value(self) -> str:
         pass
 
 
 class GetReplyAnswer(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_of_answer,
             "Enter Y or N: ",
@@ -18,7 +18,7 @@ class GetReplyAnswer(GetReply):
 
 
 class GetReplyDoesAccountExist(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         print(f"{' ' * 12}Do you have a bank account?")
         return get_answer(
             validation_of_answer,
@@ -27,7 +27,7 @@ class GetReplyDoesAccountExist(GetReply):
 
 
 class GetReplyAnswerAccount(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         print(f'{" " * 12}Would you like to create an account?')
         return get_answer(
             validation_of_answer,
@@ -36,7 +36,7 @@ class GetReplyAnswerAccount(GetReply):
 
 
 class GetReplyLogin(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_alnum_and_not_digit,
             'Enter login: ',
@@ -44,7 +44,7 @@ class GetReplyLogin(GetReply):
 
 
 class GetReplyPassword(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return Security.encode(Security(), get_answer(
             validation_alnum_and_not_digit,
             'Enter Password: ',
@@ -52,7 +52,7 @@ class GetReplyPassword(GetReply):
 
 
 class GetReplyName(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_alpha,
             'Enter your name: ',
@@ -60,7 +60,7 @@ class GetReplyName(GetReply):
 
 
 class GetReplySurname(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_alpha,
             'Enter your surname: ',
@@ -68,7 +68,7 @@ class GetReplySurname(GetReply):
 
 
 class GetReplyCountry(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_alpha,
             'Enter the country where you come from: ',
@@ -76,7 +76,7 @@ class GetReplyCountry(GetReply):
 
 
 class GetReplyAddress(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_space_or_alpha_not_digit,
             'Enter your address: ',
@@ -84,7 +84,7 @@ class GetReplyAddress(GetReply):
 
 
 class GetReplyEmail(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_email,
             'Enter your email: ',
@@ -92,7 +92,7 @@ class GetReplyEmail(GetReply):
 
 
 class GetReplyPhone(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_digit,
             'Enter your phone: ',
@@ -101,7 +101,7 @@ class GetReplyPhone(GetReply):
 
 
 class GetReplyUserWithoutAcc(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         print(f"{' ' * 12}You don't have any open account in the internet exchange currency. "
               f"Would you like to open a new account?")
         return get_answer(
@@ -111,7 +111,7 @@ class GetReplyUserWithoutAcc(GetReply):
 
 
 class GetReplyUserTransferTitle(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_space_or_alpha_not_digit,
             'Enter the transfer title: ',
@@ -119,7 +119,7 @@ class GetReplyUserTransferTitle(GetReply):
 
 
 class GetReplyAmount(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_decimal,
             'Enter the amount: ',
@@ -127,7 +127,7 @@ class GetReplyAmount(GetReply):
 
 
 class GetReplyPayerName(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_space_or_alpha_not_digit,
             'Enter the payer name: ',
@@ -135,7 +135,7 @@ class GetReplyPayerName(GetReply):
 
 
 class GetReplyPayerAccNumber(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_digit,
             'Enter the payer account number: ',
@@ -144,7 +144,7 @@ class GetReplyPayerAccNumber(GetReply):
 
 
 class GetReplyCardName(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_space_or_alpha_not_digit,
             'Enter the name of the card: ',
@@ -152,7 +152,7 @@ class GetReplyCardName(GetReply):
 
 
 class GetReplyLimit(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_decimal,
             'Enter the new limit: ',
@@ -160,7 +160,7 @@ class GetReplyLimit(GetReply):
 
 
 class GetReplyCard(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         print(f"{' ' * 12}You don't have any card for your account. "
               f"Would you like to open a new account?")
         return get_answer(
@@ -170,7 +170,7 @@ class GetReplyCard(GetReply):
 
 
 class GetReplyPayerAccNb(GetReply):
-    def get_value(self):
+    def get_value(self) -> str:
         return get_answer(
             validation_digit,
             'Enter the payer account number: ',
@@ -178,14 +178,30 @@ class GetReplyPayerAccNb(GetReply):
             (20, 26))
 
 
+class GetReplyFilePath(GetReply):
+    def get_value(self) -> str:
+        return get_answer(
+            validation_file_path,
+            r"Enter the path to the file in the format  C:\Folder\Subfolder  : ",
+            'The path entered does not exist. Try again')
+
+
+class GetReplyFileName(GetReply):
+    def get_value(self) -> str:
+        return get_answer(
+            validation_file_name,
+            r"Enter a file name without an extension: ",
+            'Entered data contains illegal characters. Try again')
+
+
 class GetReplyWithValue(ABC):
     @abstractmethod
-    def get_value(self, value: list):
+    def get_value(self, value: list) -> str:
         pass
 
 
 class GetReplyWithValueChosenAcc(GetReplyWithValue):
-    def get_value(self, value: list):
+    def get_value(self, value: list) -> str:
         return get_answer(
             validation_chosen_operation,
             'Enter chosen operation: ',
@@ -194,7 +210,7 @@ class GetReplyWithValueChosenAcc(GetReplyWithValue):
 
 
 class GetReplyWithValueChosenAccCurExch(GetReplyWithValue):
-    def get_value(self, value: list):
+    def get_value(self, value: list) -> str:
         return get_answer(
             validation_chosen_operation,
             'Select the currency for which you want to perform currency exchange: ',
@@ -203,7 +219,7 @@ class GetReplyWithValueChosenAccCurExch(GetReplyWithValue):
 
 
 class GetReplyWithValueChosenCur(GetReplyWithValue):
-    def get_value(self, value: int):
+    def get_value(self, value: int) -> str:
         return get_answer(
             validation_chosen_operation,
             'Enter chosen currency: ',
@@ -212,9 +228,36 @@ class GetReplyWithValueChosenCur(GetReplyWithValue):
 
 
 class GetReplyWithValueChosenLimit(GetReplyWithValue):
-    def get_value(self, value: int):
+    def get_value(self, value: int) -> str:
         return get_answer(
             validation_chosen_operation,
             'Enter chosen limit type: ',
+            'Entered data contains illegal characters. Try again: ',
+            (1, value))
+
+
+class GetReplyWithValueChosenOper(GetReplyWithValue):
+    def get_value(self, value: int) -> str:
+        return get_answer(
+            validation_chosen_operation,
+            'Enter chosen operation: ',
+            'Entered data contains illegal characters. Try again: ',
+            (1, value))
+
+
+class GetReplyWithValuePaymentType(GetReplyWithValue):
+    def get_value(self, value: int) -> str:
+        return get_answer(
+            validation_chosen_operation,
+            'Enter the selected type of payment: ',
+            'Entered data contains illegal characters. Try again: ',
+            (1, value))
+
+
+class GetReplyWithValueCardType(GetReplyWithValue):
+    def get_value(self, value: int) -> str:
+        return get_answer(
+            validation_chosen_operation,
+            'Enter chosen card type: ',
             'Entered data contains illegal characters. Try again: ',
             (1, value))

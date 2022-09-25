@@ -5,9 +5,9 @@ from database.model.tables import *
 from management.services.currency_exchange_service import CurrencyExchange
 from management.services.card_management_service import DeleteCard
 from management.conversions import *
-from management.services.utils import *
-from datetime import date, timedelta
+from management.services.answers import *
 from decimal import Decimal
+from management.services.common import *
 
 
 class CardTransactionService:
@@ -35,7 +35,7 @@ class CardTransactionService:
             payer_name=GetReplyPayerName().get_value(),
             payout=payout,
             payment=payment,
-            rate_to_main_card_currency=Decimal(rate_to_main_currency),
+            rate_to_main_card_currency=Decimal(str(rate_to_main_currency)),
             transaction_type=transaction_type,
             rate_tu_used_account=rate,
             payer_account_number=payer_acc,
@@ -50,6 +50,10 @@ class CardTransactionService:
             account_number=used_account.account_number,
             currency=used_account.currency,
             balance=amount)
+
+    def _get_all_card_details(self, used_card: namedtuple) -> namedtuple:
+        """Get all your card information from the database"""
+        return card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
 
 
 class Security:
@@ -139,7 +143,7 @@ class Security:
         return False
 
 
-class DailyLimit(CardTransactionService):
+class CardDailyLimit(CardTransactionService):
     def check_daily_limit(self, used_account: namedtuple, card: namedtuple, exchanged_amount: dict) -> bool:
         """Check if the limit of daily transactions for a given card has not been exceeded"""
         transactions_one_day = self._get_all_transactions_for_one_day(used_account)
@@ -184,11 +188,11 @@ class DailyLimit(CardTransactionService):
         return Decimal('0')
 
 
-class Comission(CardTransactionService):
+class CardComission(CardTransactionService):
     def check_and_get_commission(self, logged_in_user, currency_for_transaction, entered_amount) -> tuple:
         """The entered amount in a given currency is converted to the main currency
         (if a currency other than the main currency of the account has been entered) for the account to check
-        if any transactions should be collected. The t is charged in
+        if any transactions should be collected. The transaction is charged in
         case of exceeding 200 (assumed for all 4 currencies) or exceeding 5 monthly transactions.
         The function returns the amount in the same currency as was entered,
         but after deducting the commission if it was required."""
@@ -221,15 +225,14 @@ class Comission(CardTransactionService):
             return self._get_amount_with_comission(amount), self._get_comission(amount)
         return amount, 0
 
-    @staticmethod
-    def _get_amount_with_comission(amount: Decimal) -> Decimal:
+    def _get_amount_with_comission(self, amount: Decimal) -> Decimal:
         """Get the amount with added commission"""
-        return amount + (amount * Decimal(0.02))
+        return amount + self._get_comission(amount)
 
     @staticmethod
     def _get_comission(amount: Decimal) -> Decimal:
         """Get commission on a given amount"""
-        return amount * Decimal(0.02)
+        return amount * Decimal('0.02')
 
     @staticmethod
     def _amount_and_qty_of_transaction_appropriate(transactions: list, amount: Decimal) -> bool:
@@ -242,7 +245,7 @@ class Comission(CardTransactionService):
         return [(item[0] if item[0] else 0) for item in all_exchanges]
 
 
-class DepositMoney(CardTransactionService):
+class CardDepositMoney(CardTransactionService):
     def deposit_money(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Deposit money by card. Make a deposit to the appropriate account, if necessary, convert the amount."""
         amount = Decimal(GetReplyAmount().get_value())
@@ -263,7 +266,7 @@ class DepositMoney(CardTransactionService):
 
         self.add_card_transaction(
             used_account, used_card, amount, 0, used_account.balance + amount,
-            "NO", "YES", 0, "Deposit money", rate, payer_acc_number, Decimal(0))
+            "NO", "YES", 0, "Deposit money", rate, payer_acc_number, Decimal('0'))
         self.update_account(used_account, used_account.balance + amount)
 
     def _find_all_user_accounts(self, logged_in_user: namedtuple):
@@ -294,7 +297,7 @@ class DepositMoney(CardTransactionService):
         return accounts[0]
 
 
-class GetAccountForTransaction(Comission):
+class GetAccountForTransaction(CardComission):
     def __init__(self, engine, logged_in_user: namedtuple, card: namedtuple, entered_amount, currency):
         super().__init__(engine)
         self.accounts = None
@@ -304,7 +307,7 @@ class GetAccountForTransaction(Comission):
         self.currency = currency
         self.used_account = None
         self.amount_exched = None
-        self.rate = Decimal(1)
+        self.rate = Decimal('1')
         self.amt_for_limit_checking = None
 
     def find_the_best_account_for_transaction(self):
@@ -326,7 +329,7 @@ class GetAccountForTransaction(Comission):
         return self
 
     def _get_account_with_same_currency_as_transaction(self) -> tuple | None:
-        """Find an account with the same currency as the transaction"""
+        """Find an account with the same currency as the t"""
         account = self._find_account_with_same_currency()
         return account[0] if account else None
 
@@ -361,7 +364,7 @@ class GetAccountForTransaction(Comission):
         return [user_account_named_tuple(item) for item in accounts]
 
 
-class WithdrawMoney(Security, DailyLimit, Comission):
+class WithdrawMoneyByCard(Security, CardDailyLimit, CardComission):
     def withdraw_money(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Perform card payment operations. Check that the card is not blocked and that
         it has sufficient funds. If possible, select the account with the currency you want to select from the ATM."""
@@ -401,16 +404,12 @@ class WithdrawMoney(Security, DailyLimit, Comission):
 
     @staticmethod
     def _get_balance_after_transaction(used_account, amount_exchanged, entred_amount):
-        """Get the balance after completing the transaction"""
+        """Get the balance after completing the t"""
         return used_account.balance - amount_exchanged if amount_exchanged else used_account.balance - entred_amount
 
     @staticmethod
     def _get_exchanged_amount_if_exists(amount_exchanged, entred_amount):
         return amount_exchanged if amount_exchanged else entred_amount
-
-    def _get_all_card_details(self, used_card: namedtuple):
-        """Get all your card information from the database"""
-        return card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
 
     @staticmethod
     def _display_information_about_commission(used_card: namedtuple):
@@ -427,11 +426,11 @@ class WithdrawMoney(Security, DailyLimit, Comission):
         return True
 
 
-class PayByCard(Security, DailyLimit):
+class PayByCard(Security, CardDailyLimit):
     def pay_by_card(self, used_card: namedtuple, logged_in_user: namedtuple):
         """Perform card payments taking into account all currency conversions and the correct calculation of the
         account balance after the operation."""
-        card = card_named_tuple(self.card_crud_repo.find_by_id(used_card.id))
+        card = self._get_all_card_details(used_card)
 
         if self._card_not_blocked(card):
             type_of_payment = choose_payment_type()
@@ -457,7 +456,7 @@ class PayByCard(Security, DailyLimit):
                         self._perform_magnetic_stripe_payment(account_obj, used_card, amount)
                 else:
                     print(
-                        f"\n{' ' * 12}We are unable to complete your t because the daily limit has "
+                        f"\n{' ' * 12}We are unable to complete your transaction because the daily limit has "
                         f"been exceeded. Change your daily limit to be able to make transactions.")
 
     @staticmethod
@@ -466,7 +465,7 @@ class PayByCard(Security, DailyLimit):
         The SINGLE-USE VIRTUAL card cannot be blocked so the condition also applies to it"""
         if not card.blocked or card.card_type == "SINGLE-USE VIRTUAL":
             return True
-        print(f"\n{' ' * 12}Your card is blocked. We cannot complete your transaction.")
+        print(f"\n{' ' * 12}Your card is blocked. We cannot complete your t.")
         return False
 
     def _perform_magnetic_stripe_payment(self, account_obj, used_card, amount):
@@ -485,7 +484,7 @@ class PayByCard(Security, DailyLimit):
 
     def _perform_internet_paymant(self, account_obj, card, used_card, amount, logged_in_user):
         """Make an internet payment"""
-        if self.__limit_of_internet_payment_has_not_been_exceeded(account_obj, card) or card.card_type != "STANDARD":
+        if self._limit_of_internet_payment_has_not_been_exceeded(account_obj, card):
 
             self._add_user_card_payment(account_obj, used_card, amount, "Internet payment")
 
@@ -508,9 +507,12 @@ class PayByCard(Security, DailyLimit):
         return self.update_account(account_obj.used_account, (self._get_balance_after_payment(account_obj)))
 
     @staticmethod
-    def __limit_of_internet_payment_has_not_been_exceeded(account_obj, card) -> bool:
-        """Check that the limit for internet payments has not been exceeded"""
+    def _limit_of_internet_payment_has_not_been_exceeded(account_obj, card) -> bool:
+        """Check that the limit for internet payments has not been exceeded.
+        Online cards have no limits on internet transactions"""
         if card.card_type == "STANDARD" and account_obj.amt_for_limit_checking["result"] < card.internet_limit:
+            return True
+        elif card.card_type != "STANDARD":
             return True
         print(f"\n{' ' * 12}Your internet transactions limits do not allow you to "
               f"complete the transactions. Change your limit.")

@@ -12,8 +12,6 @@ class MyTestCase(unittest.TestCase):
     port = 3310
     url = f'mysql://{username}:{password}@localhost:{port}/{database}'
     engine = create_engine(url, future=True)
-    metadata = base.metadata
-    metadata.create_all(engine)
     user_account_crud_repo = CrudRepo(engine, UserAccountTable)
     user_data_crud_repo = CrudRepo(engine, UserDataTable)
     card_crud_repo = CrudRepo(engine, CardTable)
@@ -45,6 +43,7 @@ class MyTestCase(unittest.TestCase):
         """The function takes a given row from the table, modifies it and
         checks if the modified row differs from the one taken at the beginning"""
         user_account_before_update = self.user_account_crud_repo.find_by_id(1)
+        print(user_account_before_update)
         CrudRepo(self.engine, UserAccountTable).update_by_id(
             user_account_before_update[0],
             id_user_data=user_account_before_update[1],

@@ -1,28 +1,28 @@
 from collections import namedtuple
 
 
-def user_data_named_tuple(items):
+def user_data_named_tuple(item: tuple) -> namedtuple:
     UserData = namedtuple("UserData",
                           "id name surname country address email phone login password creation_date main_currency")
-    return UserData(*items)
+    return UserData(*item)
 
 
-def user_account_named_tuple(items):
+def user_account_named_tuple(item: tuple) -> namedtuple:
     UserAccount = namedtuple("UserAccount", "id id_user_data account_number currency balance")
-    return UserAccount(*items)
+    return UserAccount(*item)
 
 
-def dates_named_tuple(items):
+def dates_named_tuple(items: tuple) -> namedtuple:
     Dates = namedtuple("Dates", "start_date end_date")
     return Dates(*items)
 
 
-def used_card_named_tuple(items):
+def used_card_named_tuple(item: tuple) -> namedtuple:
     UsedCard = namedtuple("UsedCard", "id card_number valid_thru card_name card_type main_currency")
-    return UsedCard(*items)
+    return UsedCard(*item)
 
 
-def card_named_tuple(items):
+def card_named_tuple(item: tuple) -> namedtuple:
     Card = namedtuple(
         "Card",
         "id "
@@ -42,10 +42,10 @@ def card_named_tuple(items):
         "card_name "
         "card_type "
         "main_currency")
-    return Card(*items)
+    return Card(*item)
 
 
-def currency_exchange_named_tuple(items):
+def currency_exchange_named_tuple(item: tuple) -> namedtuple:
     ExchangeCurrency = namedtuple(
         "ExchangeCurrency",
         "id "
@@ -60,10 +60,10 @@ def currency_exchange_named_tuple(items):
         "transaction_time "
         "amount_in_main_user_currency "
         "commission_in_main_user_currency")
-    return ExchangeCurrency(*items)
+    return ExchangeCurrency(*item)
 
 
-def card_transaction_named_tuple(items):
+def card_transaction_named_tuple(item: tuple) -> namedtuple:
     CardTransaction = namedtuple(
         "CardTransaction",
         "id "
@@ -81,10 +81,10 @@ def card_transaction_named_tuple(items):
         "rate_tu_used_account "
         "payer_account_number "
         "amount_in_main_user_currency")
-    return CardTransaction(*items)
+    return CardTransaction(*item)
 
 
-def transaction_named_tuple(items):
+def transaction_named_tuple(item: tuple) -> namedtuple:
     Transaction = namedtuple(
         "Transaction",
         "id "
@@ -97,10 +97,10 @@ def transaction_named_tuple(items):
         "balance "
         "payer_name "
         "payer_account_number")
-    return Transaction(*items)
+    return Transaction(*item)
 
 
-def transactions_for_statement_named_tuple(items):
+def transactions_for_statement_named_tuple(item: tuple) -> namedtuple:
     TransactionsToStatement = namedtuple(
         "TransactionsToStatement",
         "date "
@@ -112,6 +112,4 @@ def transactions_for_statement_named_tuple(items):
         "rate "
         "saldo "
         "commission")
-    return TransactionsToStatement(*items)
-
-
+    return TransactionsToStatement(*item)
